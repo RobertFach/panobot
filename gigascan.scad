@@ -316,6 +316,23 @@ module pantiltconnector() {
     }
 }
 
+module camquickmount() {
+    rotate([90,0,90])translate([-75,100+4,-25])difference() {
+        hull() {
+            cube([150,1,50]);
+            translate([0,10,5])cube([150,1,40]);
+        }
+        rotate([90,0,0])hull() {
+            translate([75+50,25,-5])cylinder(d=20,h=6);
+            translate([75+-50,25,-5])cylinder(d=20,h=6);
+        }
+        rotate([90,0,0])hull() {
+            translate([75+50,25,-12])cylinder(d=6,h=14);
+            translate([75+-50,25,-12])cylinder(d=6,h=14);
+        }
+    }
+}
+
 mountgear();
 drivegear();
 rotate([0,0,90])pan();
@@ -332,3 +349,4 @@ tiltsidestepper();
 tiltsteppermount();
 rotate([0,0,180])tiltsteppermount();
 pantiltconnector();
+camquickmount();
