@@ -86,10 +86,11 @@ void setupMenus()
   p_menuEntryRoot = new MenuEntry("Setup", NULL, NULL);
   g_menuManager.addMenuRoot( p_menuEntryRoot );
   g_menuManager.addChild( new MenuEntry("Max Pan Left", NULL, setMaxPanLeftCallback));
-//  g_menuManager.addChild( new MenuEntry("Max Pan Right", NULL, setMaxPanRightCallback));
+  g_menuManager.addChild( new MenuEntry("Max Pan Right", NULL, setMaxPanRightCallback));
 //  g_menuManager.addChild( new MenuEntry("Max Tilt Up", NULL, setMaxTiltUpCallback));
 //  g_menuManager.addChild( new MenuEntry("Max Tilt Down", NULL, setMaxTiltDownCallback));
-//  g_menuManager.addChild( new MenuEntry("Pan Step", NULL, setMaxPanStepCallback));
+  g_menuManager.addChild( new MenuEntry("Pan Step", NULL, setPanStepCallback));
+  g_menuManager.addChild( new MenuEntry("Take Picture", NULL, takePictureCallback));
 //  g_menuManager.addChild( new MenuEntry("Tilt Step", NULL, setMaxTiltStepCallback));
   
   g_menuManager.addChild( new MenuEntry("Back", (void*) &g_menuManager, MenuEntry_BackCallbackFunc));
@@ -103,14 +104,28 @@ AccelStepper tiltStepper(AccelStepper::DRIVER, TILT_STEP_PIN, TILT_DIR_PIN);
 
 void setup() 
 {
+  pinMode(FOCUS_PIN, OUTPUT);
+  pinMode(SHUTTER_PIN, OUTPUT);  
+  digitalWrite(FOCUS_PIN, LOW);
+  digitalWrite(SHUTTER_PIN, LOW);
   panStepper.setMaxSpeed(200.0);
   panStepper.setAcceleration(200.0);
+  panStepper.setPinsInverted(true,false,false);
   setupMenus();
 }
 
 boolean g_runScan = false;
+boolean g_isMaxPanLeftSetup = false;
+boolean g_isMaxPanRightSetup = false;
+boolean g_isPanStepSetup = false;
+boolean g_runScanRight = false;
+boolean g_takePicture = false;
  
-int pan_step_per_deg = 100;
+int pan_step_per_deg = 7;
+int g_maxPanLeftDeg = -10;
+int g_maxPanRightDeg = +10;
+int g_panStepDeg = 0;
+int g_scanCurrentPanPosition = 0;
 
 void loop()
 {
@@ -139,49 +154,100 @@ case Tasterunten:
 }
 case Tasterselect:
 {
-  g_menuManager.DoMenuAction( MENU_ACTION_SELECT);  
+  if (g_isMaxPanLeftSetup || g_isMaxPanRightSetup) {
+    panStepper.moveTo(0);
+    g_isMaxPanLeftSetup  = false;
+    g_isMaxPanRightSetup = false;
+  }
+  if (g_isPanStepSetup) {
+    panStepper.moveTo(0);
+    g_isPanStepSetup = false;
+  }
+  g_menuManager.DoMenuAction( MENU_ACTION_SELECT);
   break;
 }
 case KEYPAD_NONE:
 {
-//  if (mode == 1) {
-//      digitalWrite(panDirPin,HIGH); // Enables the motor to move in a particular direction
-//      // Makes 200 pulses for making one full cycle rotation
-//      for(int x = 0; x < 10; x++) {
-//        digitalWrite(panStepPin,HIGH); 
-//        delayMicroseconds(500); 
-//        digitalWrite(panStepPin,LOW); 
-//        delayMicroseconds(500); 
-//      }
-//      digitalWrite(focusPin, HIGH);
-//      delay(1000);
-//      digitalWrite(shutterPin, HIGH);
-//      delay(50);
-//      digitalWrite(focusPin, LOW);
-//      digitalWrite(shutterPin, LOW);   
-//  }
 break;
 }
 } //switch-case Befehl beenden
   if (g_runScan) {
     if (panStepper.distanceToGo() == 0)
-      panStepper.moveTo(-panStepper.currentPosition());
+    {
+      if (g_takePicture) {
+        triggerPicture();
+      } else {
+        if (g_runScanRight) {
+          g_scanCurrentPanPosition = g_scanCurrentPanPosition + g_panStepDeg;
+          if (g_scanCurrentPanPosition > g_maxPanRightDeg)
+            g_runScanRight = false;
+        } else {
+          g_scanCurrentPanPosition = g_scanCurrentPanPosition - g_panStepDeg;        
+          if (g_scanCurrentPanPosition < g_maxPanLeftDeg)
+            g_runScanRight = true;
+        }
+        panStepper.moveTo(g_scanCurrentPanPosition * pan_step_per_deg);
+        g_takePicture = true;
+      }
+    }
+  }
+  if (g_isMaxPanLeftSetup) {
+     panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
+  }
+  if (g_isMaxPanRightSetup) {
+     panStepper.moveTo(g_maxPanRightDeg * pan_step_per_deg);
+  }
+  if (g_isPanStepSetup) {
+    panStepper.moveTo(g_panStepDeg * pan_step_per_deg);
   }
   panStepper.run();
 } //Loop beenden
 
-void rotatePan(int deg)
+int triggerPicture() 
 {
-  
+//  if (TRIGGER_PICTURE_STATE == START) 
+//  {
+//  }
+//  digitalWrite(FOCUS_PIN, HIGH);
+//  delay(1000);
+  digitalWrite(SHUTTER_PIN, HIGH);
+  delay(1250);
+  digitalWrite(FOCUS_PIN, LOW);
+  digitalWrite(SHUTTER_PIN, LOW);
+  g_takePicture = false;
 }
 
 void runScanCallback( char* pMenuText, void*pUserData)
 {
-  g_runScan = true; 
-  panStepper.moveTo(100);
+  g_runScan = true;
+  g_runScanRight = true;
+  g_takePicture = true;
+  g_scanCurrentPanPosition = g_maxPanLeftDeg;
+  panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
 }
 
 void setMaxPanLeftCallback( char* pMenuText, void*pUserData)
 {
+  char *pLabel = "max Pan Left";
+  g_isMaxPanLeftSetup = true;
+  g_menuManager.DoIntInput( -90, 0, g_maxPanLeftDeg, 1, &pLabel, 1, &g_maxPanLeftDeg);
+}
 
+void setMaxPanRightCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "max Pan Right";
+  g_isMaxPanRightSetup = true;
+  g_menuManager.DoIntInput( 0, 90, g_maxPanRightDeg, 1, &pLabel, 1, &g_maxPanRightDeg);
+}
+
+void setPanStepCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "Pan Step";
+  g_isPanStepSetup = true;
+  g_menuManager.DoIntInput( 0, 90, g_panStepDeg, 1, &pLabel, 1, &g_panStepDeg);  
+}
+
+void takePictureCallback( char* pMenuText, void*pUserData)
+{
+  triggerPicture();  
 }
