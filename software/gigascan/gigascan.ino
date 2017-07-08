@@ -87,11 +87,11 @@ void setupMenus()
   g_menuManager.addMenuRoot( p_menuEntryRoot );
   g_menuManager.addChild( new MenuEntry("Max Pan Left", NULL, setMaxPanLeftCallback));
   g_menuManager.addChild( new MenuEntry("Max Pan Right", NULL, setMaxPanRightCallback));
-//  g_menuManager.addChild( new MenuEntry("Max Tilt Up", NULL, setMaxTiltUpCallback));
-//  g_menuManager.addChild( new MenuEntry("Max Tilt Down", NULL, setMaxTiltDownCallback));
+  g_menuManager.addChild( new MenuEntry("Max Tilt Up", NULL, setMaxTiltUpCallback));
+  g_menuManager.addChild( new MenuEntry("Max Tilt Down", NULL, setMaxTiltDownCallback));
   g_menuManager.addChild( new MenuEntry("Pan Step", NULL, setPanStepCallback));
+  g_menuManager.addChild( new MenuEntry("Tilt Step", NULL, setTiltStepCallback));
   g_menuManager.addChild( new MenuEntry("Take Picture", NULL, takePictureCallback));
-//  g_menuManager.addChild( new MenuEntry("Tilt Step", NULL, setMaxTiltStepCallback));
   
   g_menuManager.addChild( new MenuEntry("Back", (void*) &g_menuManager, MenuEntry_BackCallbackFunc));
   g_menuManager.addSibling( new MenuEntry("Run Scan", NULL, runScanCallback));
@@ -111,6 +111,9 @@ void setup()
   panStepper.setMaxSpeed(200.0);
   panStepper.setAcceleration(200.0);
   panStepper.setPinsInverted(true,false,false);
+  tiltStepper.setMaxSpeed(200.0);
+  tiltStepper.setAcceleration(200.0);
+  tiltStepper.setPinsInverted(false,false,false);
   setupMenus();
 }
 
@@ -118,6 +121,9 @@ boolean g_runScan = false;
 boolean g_isMaxPanLeftSetup = false;
 boolean g_isMaxPanRightSetup = false;
 boolean g_isPanStepSetup = false;
+boolean g_isMaxTiltUpSetup = false;
+boolean g_isMaxTiltDownSetup = false;
+boolean g_isTiltStepSetup = false;
 boolean g_runScanRight = false;
 boolean g_takePicture = false;
  
@@ -125,7 +131,12 @@ int pan_step_per_deg = 7;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
 int g_panStepDeg = 0;
+int tilt_step_per_deg = 7;
+int g_maxTiltUpDeg = +10;
+int g_maxTiltDownDeg = -10;
+int g_tiltStepDeg = 0;
 int g_scanCurrentPanPosition = 0;
+int g_scanCurrentTiltPosition = 0;
 
 void loop()
 {
@@ -163,6 +174,16 @@ case Tasterselect:
     panStepper.moveTo(0);
     g_isPanStepSetup = false;
   }
+  if (g_isMaxTiltDownSetup || g_isMaxTiltUpSetup)
+  {
+    tiltStepper.moveTo(0);
+    g_isMaxTiltDownSetup = false;
+    g_isMaxTiltUpSetup = false;
+  }
+  if (g_isTiltStepSetup) {
+    tiltStepper.moveTo(0);
+    g_isTiltStepSetup = false;
+  }  
   g_menuManager.DoMenuAction( MENU_ACTION_SELECT);
   break;
 }
@@ -172,24 +193,35 @@ break;
 }
 } //switch-case Befehl beenden
   if (g_runScan) {
-    if (panStepper.distanceToGo() == 0)
-    {
-      if (g_takePicture) {
-        triggerPicture();
-      } else {
-        if (g_runScanRight) {
-          g_scanCurrentPanPosition = g_scanCurrentPanPosition + g_panStepDeg;
-          if (g_scanCurrentPanPosition > g_maxPanRightDeg)
-            g_runScanRight = false;
+    if (tiltStepper.distanceToGo() == 0)
+      if (panStepper.distanceToGo() == 0)
+      {
+        if (g_takePicture) {
+          triggerPicture();
         } else {
-          g_scanCurrentPanPosition = g_scanCurrentPanPosition - g_panStepDeg;        
-          if (g_scanCurrentPanPosition < g_maxPanLeftDeg)
-            g_runScanRight = true;
+          if (g_runScanRight) {
+            g_scanCurrentPanPosition = g_scanCurrentPanPosition + g_panStepDeg;
+            if (g_scanCurrentPanPosition > g_maxPanRightDeg)
+            {
+              g_runScanRight = false;
+              g_scanCurrentTiltPosition = g_scanCurrentTiltPosition + g_tiltStepDeg;
+              tiltStepper.moveTo(g_scanCurrentTiltPosition * tilt_step_per_deg);
+              g_takePicture = true;
+            }
+          } else {
+            g_scanCurrentPanPosition = g_scanCurrentPanPosition - g_panStepDeg;        
+            if (g_scanCurrentPanPosition < g_maxPanLeftDeg)
+            {
+              g_runScanRight = true;
+              g_scanCurrentTiltPosition = g_scanCurrentTiltPosition + g_tiltStepDeg;
+              tiltStepper.moveTo(g_scanCurrentTiltPosition * tilt_step_per_deg);
+              g_takePicture = true;
+            }
+          }
+          panStepper.moveTo(g_scanCurrentPanPosition * pan_step_per_deg);
+          g_takePicture = true;
         }
-        panStepper.moveTo(g_scanCurrentPanPosition * pan_step_per_deg);
-        g_takePicture = true;
       }
-    }
   }
   if (g_isMaxPanLeftSetup) {
      panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
@@ -200,7 +232,17 @@ break;
   if (g_isPanStepSetup) {
     panStepper.moveTo(g_panStepDeg * pan_step_per_deg);
   }
+  if (g_isMaxTiltUpSetup) {
+     tiltStepper.moveTo(g_maxTiltUpDeg * tilt_step_per_deg);
+  }
+  if (g_isMaxTiltDownSetup) {
+     tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
+  }
+  if (g_isTiltStepSetup) {
+    tiltStepper.moveTo(g_tiltStepDeg * tilt_step_per_deg);
+  }
   panStepper.run();
+  tiltStepper.run();
 } //Loop beenden
 
 int triggerPicture() 
@@ -209,9 +251,9 @@ int triggerPicture()
 //  {
 //  }
 //  digitalWrite(FOCUS_PIN, HIGH);
-//  delay(1000);
+  delay(1000);
   digitalWrite(SHUTTER_PIN, HIGH);
-  delay(1250);
+  delay(50);
   digitalWrite(FOCUS_PIN, LOW);
   digitalWrite(SHUTTER_PIN, LOW);
   g_takePicture = false;
@@ -223,7 +265,9 @@ void runScanCallback( char* pMenuText, void*pUserData)
   g_runScanRight = true;
   g_takePicture = true;
   g_scanCurrentPanPosition = g_maxPanLeftDeg;
+  g_scanCurrentTiltPosition = g_maxTiltDownDeg;
   panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
+  tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
 }
 
 void setMaxPanLeftCallback( char* pMenuText, void*pUserData)
@@ -245,6 +289,28 @@ void setPanStepCallback( char* pMenuText, void*pUserData)
   char *pLabel = "Pan Step";
   g_isPanStepSetup = true;
   g_menuManager.DoIntInput( 0, 90, g_panStepDeg, 1, &pLabel, 1, &g_panStepDeg);  
+}
+
+void setMaxTiltUpCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "max Tilt Up";
+  g_isMaxTiltUpSetup = true;
+  g_menuManager.DoIntInput( 0, 90, g_maxTiltUpDeg, 1, &pLabel, 1, &g_maxTiltUpDeg);
+}
+
+void setMaxTiltDownCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "max Tilt Down";
+  g_isMaxTiltDownSetup = true;
+  g_menuManager.DoIntInput( -90, 0, g_maxTiltDownDeg, 1, &pLabel, 1, &g_maxTiltDownDeg);  
+}
+
+void setTiltStepCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "Tilt Step";
+  g_isTiltStepSetup = true;
+  g_menuManager.DoIntInput( 0, 90, g_tiltStepDeg, 1, &pLabel, 1, &g_tiltStepDeg);  
+  
 }
 
 void takePictureCallback( char* pMenuText, void*pUserData)
