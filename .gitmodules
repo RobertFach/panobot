@@ -1,3 +1,9 @@
 [submodule "MCAD"]
 	path = MCAD
-	url = https://github.com/SolidCode/MCAD
+	url = https://github.com/RobertFach/MCAD.git
+[submodule "software/gigascan/libraries/AccelStepper"]
+	path = software/gigascan/libraries/AccelStepper
+	url = https://github.com/RobertFach/AccelStepper.git
+[submodule "software/gigascan/libraries/Arduino_LCD_Menu"]
+	path = software/gigascan/libraries/Arduino_LCD_Menu
+	url = https://github.com/RobertFach/Arduino_LCD_Menu.git
