@@ -91,7 +91,9 @@ void setupMenus()
   g_menuManager.addChild( new MenuEntry("Max Tilt Down", NULL, setMaxTiltDownCallback));
   g_menuManager.addChild( new MenuEntry("Pan Step", NULL, setPanStepCallback));
   g_menuManager.addChild( new MenuEntry("Tilt Step", NULL, setTiltStepCallback));
-  g_menuManager.addChild( new MenuEntry("Take Picture", NULL, takePictureCallback));
+  g_menuManager.addChild( new MenuEntry("Image P-Delay", NULL, setTakePicturePreDelayCallback));
+  g_menuManager.addChild( new MenuEntry("Image Delay", NULL, setTakePictureDelayCallback));
+  g_menuManager.addChild( new MenuEntry("Take Image", NULL, takePictureCallback));
   
   g_menuManager.addChild( new MenuEntry("Back", (void*) &g_menuManager, MenuEntry_BackCallbackFunc));
   g_menuManager.addSibling( new MenuEntry("Run Scan", NULL, runScanCallback));
@@ -126,6 +128,7 @@ boolean g_isMaxTiltDownSetup = false;
 boolean g_isTiltStepSetup = false;
 boolean g_runScanRight = false;
 boolean g_takePicture = false;
+boolean g_runTilt = false;
  
 int pan_step_per_deg = 7;
 int g_maxPanLeftDeg = -10;
@@ -137,6 +140,8 @@ int g_maxTiltDownDeg = -10;
 int g_tiltStepDeg = 0;
 int g_scanCurrentPanPosition = 0;
 int g_scanCurrentTiltPosition = 0;
+int g_takePictureDelay = 250;
+int g_takePicturePreDelay = 0;
 
 void loop()
 {
@@ -199,23 +204,22 @@ break;
         if (g_takePicture) {
           triggerPicture();
         } else {
-          if (g_runScanRight) {
-            g_scanCurrentPanPosition = g_scanCurrentPanPosition + g_panStepDeg;
-            if (g_scanCurrentPanPosition > g_maxPanRightDeg)
-            {
-              g_runScanRight = false;
+          if (g_runTilt) {
               g_scanCurrentTiltPosition = g_scanCurrentTiltPosition + g_tiltStepDeg;
               tiltStepper.moveTo(g_scanCurrentTiltPosition * tilt_step_per_deg);
               g_takePicture = true;
+              g_runTilt = false;            
+          } else if (g_runScanRight) {
+            g_scanCurrentPanPosition = g_scanCurrentPanPosition + g_panStepDeg;
+            if (g_scanCurrentPanPosition > g_maxPanRightDeg) {
+              g_runScanRight = false;
+              g_runTilt = true;
             }
           } else {
             g_scanCurrentPanPosition = g_scanCurrentPanPosition - g_panStepDeg;        
-            if (g_scanCurrentPanPosition < g_maxPanLeftDeg)
-            {
+            if (g_scanCurrentPanPosition < g_maxPanLeftDeg) {
               g_runScanRight = true;
-              g_scanCurrentTiltPosition = g_scanCurrentTiltPosition + g_tiltStepDeg;
-              tiltStepper.moveTo(g_scanCurrentTiltPosition * tilt_step_per_deg);
-              g_takePicture = true;
+              g_runTilt = true;
             }
           }
           panStepper.moveTo(g_scanCurrentPanPosition * pan_step_per_deg);
@@ -250,12 +254,13 @@ int triggerPicture()
 //  if (TRIGGER_PICTURE_STATE == START) 
 //  {
 //  }
-//  digitalWrite(FOCUS_PIN, HIGH);
-  delay(1000);
+  digitalWrite(FOCUS_PIN, HIGH);
+  delay(g_takePicturePreDelay);
   digitalWrite(SHUTTER_PIN, HIGH);
-  delay(50);
+  delay(500);
   digitalWrite(FOCUS_PIN, LOW);
   digitalWrite(SHUTTER_PIN, LOW);
+  delay(g_takePictureDelay);
   g_takePicture = false;
 }
 
@@ -263,6 +268,7 @@ void runScanCallback( char* pMenuText, void*pUserData)
 {
   g_runScan = true;
   g_runScanRight = true;
+  g_runTilt = false;
   g_takePicture = true;
   g_scanCurrentPanPosition = g_maxPanLeftDeg;
   g_scanCurrentTiltPosition = g_maxTiltDownDeg;
@@ -311,6 +317,18 @@ void setTiltStepCallback( char* pMenuText, void*pUserData)
   g_isTiltStepSetup = true;
   g_menuManager.DoIntInput( 0, 90, g_tiltStepDeg, 1, &pLabel, 1, &g_tiltStepDeg);  
   
+}
+
+void setTakePicturePreDelayCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "Image P-Delay";
+  g_menuManager.DoIntInput( 0, 5000, g_takePicturePreDelay, 100, &pLabel, 1, &g_takePicturePreDelay);    
+}
+
+void setTakePictureDelayCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "Image Delay";
+  g_menuManager.DoIntInput( 0, 150000, g_takePictureDelay, 500, &pLabel, 1, &g_takePictureDelay);    
 }
 
 void takePictureCallback( char* pMenuText, void*pUserData)
