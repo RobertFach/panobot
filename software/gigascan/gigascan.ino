@@ -93,6 +93,7 @@ void setupMenus()
   g_menuManager.addChild( new MenuEntry("Tilt Step", NULL, setTiltStepCallback));
   g_menuManager.addChild( new MenuEntry("Image P-Delay", NULL, setTakePicturePreDelayCallback));
   g_menuManager.addChild( new MenuEntry("Image Delay", NULL, setTakePictureDelayCallback));
+  g_menuManager.addChild( new MenuEntry("Shutter Delay", NULL, setShutterDelayCallback));
   g_menuManager.addChild( new MenuEntry("Take Image", NULL, takePictureCallback));
   
   g_menuManager.addChild( new MenuEntry("Back", (void*) &g_menuManager, MenuEntry_BackCallbackFunc));
@@ -110,11 +111,11 @@ void setup()
   pinMode(SHUTTER_PIN, OUTPUT);  
   digitalWrite(FOCUS_PIN, LOW);
   digitalWrite(SHUTTER_PIN, LOW);
-  panStepper.setMaxSpeed(200.0);
-  panStepper.setAcceleration(200.0);
+  panStepper.setMaxSpeed(400.0);
+  panStepper.setAcceleration(300.0);
   panStepper.setPinsInverted(true,false,false);
-  tiltStepper.setMaxSpeed(200.0);
-  tiltStepper.setAcceleration(200.0);
+  tiltStepper.setMaxSpeed(400.0);
+  tiltStepper.setAcceleration(300.0);
   tiltStepper.setPinsInverted(false,false,false);
   setupMenus();
 }
@@ -130,11 +131,11 @@ boolean g_runScanRight = false;
 boolean g_takePicture = false;
 boolean g_runTilt = false;
  
-int pan_step_per_deg = 7;
+int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
 int g_panStepDeg = 0;
-int tilt_step_per_deg = 7;
+int tilt_step_per_deg = 7 * 8;
 int g_maxTiltUpDeg = +10;
 int g_maxTiltDownDeg = -10;
 int g_tiltStepDeg = 0;
@@ -142,6 +143,7 @@ int g_scanCurrentPanPosition = 0;
 int g_scanCurrentTiltPosition = 0;
 int g_takePictureDelay = 250;
 int g_takePicturePreDelay = 0;
+int g_shutterDelay = 500;
 
 void loop()
 {
@@ -257,7 +259,7 @@ int triggerPicture()
   digitalWrite(FOCUS_PIN, HIGH);
   delay(g_takePicturePreDelay);
   digitalWrite(SHUTTER_PIN, HIGH);
-  delay(500);
+  delay(g_shutterDelay);
   digitalWrite(FOCUS_PIN, LOW);
   digitalWrite(SHUTTER_PIN, LOW);
   delay(g_takePictureDelay);
@@ -329,6 +331,12 @@ void setTakePictureDelayCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "Image Delay";
   g_menuManager.DoIntInput( 0, 150000, g_takePictureDelay, 500, &pLabel, 1, &g_takePictureDelay);    
+}
+
+void setShutterDelayCallback( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "Shutter Delay";
+  g_menuManager.DoIntInput( 0, 150000, g_shutterDelay, 1000, &pLabel, 1, &g_shutterDelay);    
 }
 
 void takePictureCallback( char* pMenuText, void*pUserData)
