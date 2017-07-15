@@ -323,8 +323,12 @@ module camquickmount() {
             translate([0,10,5])cube([150,1,40]);
         }
         rotate([90,0,0])hull() {
-            translate([75+50,25,-5])cylinder(d=20,h=6);
-            translate([75+-50,25,-5])cylinder(d=20,h=6);
+            translate([75+50,25,-5])cylinder(d2=36,d1=32,h=5.1);
+            translate([75+-50,25,-5])cylinder(d2=36,d1=32,h=5.1);
+        }
+        rotate([90,0,0])hull() {
+            translate([75+50,25,-5.5])cylinder(d=20,h=5.1);
+            translate([75+-50,25,-5.5])cylinder(d=20,h=5.1);
         }
         rotate([90,0,0])hull() {
             translate([75+50,25,-12])cylinder(d=6,h=14);
@@ -349,22 +353,22 @@ module quickmountclamp() {
     }    
 }
 
-mountgear();
-drivegear();
-rotate([0,0,90])pan();
-stepper();
-steppermount();
-color("green")panrods();
-color("green")tiltsiderods();
-color("green")tiltbaserods();
-tiltside();
-tiltsidedrive();
-tiltsidedrivegear();
-tiltsidesteppergear();
-tiltsidestepper();
-tiltsteppermount();
-rotate([0,0,180])tiltsteppermount();
-pantiltconnector();
+//mountgear();
+//drivegear();
+//rotate([0,0,90])pan();
+//stepper();
+//steppermount();
+//color("green")panrods();
+//color("green")tiltsiderods();
+//color("green")tiltbaserods();
+//tiltside();
+//tiltsidedrive();
+//tiltsidedrivegear();
+//tiltsidesteppergear();
+//tiltsidestepper();
+//tiltsteppermount();
+//rotate([0,0,180])tiltsteppermount();
+//pantiltconnector();
 camquickmount();
-quickmountclamp();
-rotate([0,0,180])quickmountclamp();
+//quickmountclamp();
+//rotate([0,0,180])quickmountclamp();
