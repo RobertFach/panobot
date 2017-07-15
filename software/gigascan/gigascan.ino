@@ -4,7 +4,7 @@
 #include "MenuIntHelper.h"
 #include "MenuManager.h"
 #include "AccelStepper.h"
-
+#include <math.h>
 
 const int LCDRS = 8;
 const int LCDE  = 9;
@@ -89,12 +89,13 @@ void setupMenus()
   g_menuManager.addChild( new MenuEntry("Max Pan Right", NULL, setMaxPanRightCallback));
   g_menuManager.addChild( new MenuEntry("Max Tilt Up", NULL, setMaxTiltUpCallback));
   g_menuManager.addChild( new MenuEntry("Max Tilt Down", NULL, setMaxTiltDownCallback));
-  g_menuManager.addChild( new MenuEntry("Pan Step", NULL, setPanStepCallback));
-  g_menuManager.addChild( new MenuEntry("Tilt Step", NULL, setTiltStepCallback));
   g_menuManager.addChild( new MenuEntry("Image P-Delay", NULL, setTakePicturePreDelayCallback));
   g_menuManager.addChild( new MenuEntry("Image Delay", NULL, setTakePictureDelayCallback));
   g_menuManager.addChild( new MenuEntry("Shutter Delay", NULL, setShutterDelayCallback));
   g_menuManager.addChild( new MenuEntry("Take Image", NULL, takePictureCallback));
+  g_menuManager.addChild( new MenuEntry("Focal Length", NULL, setFocalLength));
+  g_menuManager.addChild( new MenuEntry("HOL", NULL, setHOL));
+  g_menuManager.addChild( new MenuEntry("VOL", NULL, setVOL));
   
   g_menuManager.addChild( new MenuEntry("Back", (void*) &g_menuManager, MenuEntry_BackCallbackFunc));
   g_menuManager.addSibling( new MenuEntry("Run Scan", NULL, runScanCallback));
@@ -104,21 +105,6 @@ void setupMenus()
 
 AccelStepper panStepper(AccelStepper::DRIVER, PAN_STEP_PIN, PAN_DIR_PIN);
 AccelStepper tiltStepper(AccelStepper::DRIVER, TILT_STEP_PIN, TILT_DIR_PIN);
-
-void setup() 
-{
-  pinMode(FOCUS_PIN, OUTPUT);
-  pinMode(SHUTTER_PIN, OUTPUT);  
-  digitalWrite(FOCUS_PIN, LOW);
-  digitalWrite(SHUTTER_PIN, LOW);
-  panStepper.setMaxSpeed(400.0);
-  panStepper.setAcceleration(300.0);
-  panStepper.setPinsInverted(true,false,false);
-  tiltStepper.setMaxSpeed(400.0);
-  tiltStepper.setAcceleration(300.0);
-  tiltStepper.setPinsInverted(false,false,false);
-  setupMenus();
-}
 
 boolean g_runScan = false;
 boolean g_isMaxPanLeftSetup = false;
@@ -134,16 +120,87 @@ boolean g_runTilt = false;
 int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
-int g_panStepDeg = 0;
+double g_panStepDeg = 0;
 int tilt_step_per_deg = 7 * 8;
 int g_maxTiltUpDeg = +10;
 int g_maxTiltDownDeg = -10;
-int g_tiltStepDeg = 0;
-int g_scanCurrentPanPosition = 0;
-int g_scanCurrentTiltPosition = 0;
+double g_tiltStepDeg = 0;
+int g_scanPositionHorizontal = 0;
+int g_scanPositionVertical = 0;
+int g_picturesHorizontal = 0;
+int g_picturesVertical = 0;
+int g_picturesCount = 0;
+int g_picturesTotal = 0;
 int g_takePictureDelay = 250;
 int g_takePicturePreDelay = 0;
 int g_shutterDelay = 500;
+
+double g_crop = 1.6;
+double g_sensorFF_horizontal = 36.0;
+double g_sensorFF_vertical = 24.0;
+int g_focalLength = 300;
+int g_hol = 30;
+int g_vol = 30;
+double g_hfov = 0;
+double g_vfov = 0;
+
+void updateScanner() {
+  g_hfov = degrees( 2 * atan2(g_sensorFF_horizontal, g_crop * 2 * g_focalLength));
+  g_vfov = degrees( 2 * atan2(g_sensorFF_vertical, g_crop * 2 * g_focalLength));
+  g_panStepDeg = g_hfov * g_hol / 100;
+  g_tiltStepDeg = g_vfov * g_vol / 100;
+  g_picturesHorizontal = ceil((abs(g_maxPanLeftDeg) + abs(g_maxPanRightDeg)) / g_panStepDeg);
+  g_picturesVertical = ceil((abs(g_maxTiltUpDeg) + abs(g_maxTiltDownDeg)) / g_tiltStepDeg);
+  g_picturesTotal = g_picturesHorizontal * g_picturesVertical;
+  Serial.print("HSCAN: "); Serial.println(abs(g_maxPanLeftDeg) + abs(g_maxPanRightDeg), DEC);
+  Serial.print("VSCAN: "); Serial.println(abs(g_maxTiltUpDeg) + abs(g_maxTiltDownDeg), DEC);
+  Serial.print("g_hfov: "); Serial.println(g_hfov,DEC);
+  Serial.print("g_vfov: "); Serial.println(g_vfov,DEC);
+  Serial.print("g_panStepDeg: "); Serial.println(g_panStepDeg,DEC);
+  Serial.print("g_tiltStepDeg: "); Serial.println(g_tiltStepDeg,DEC);
+  Serial.print("g_picturesHorizontal: "); Serial.println(g_picturesHorizontal, DEC);
+  Serial.print("g_picturesVertical: "); Serial.println(g_picturesVertical, DEC);
+  Serial.print("g_picturesTotal: "); Serial.println(g_picturesTotal, DEC);  
+}
+
+void printScannerStats() {
+  Serial.print("H["); 
+  Serial.print(g_scanPositionHorizontal+1, DEC); 
+  Serial.print("/");
+  Serial.print(g_picturesHorizontal, DEC);
+  Serial.println("]"); 
+  Serial.print("V["); 
+  Serial.print(g_scanPositionVertical+1, DEC); 
+  Serial.print("/");
+  Serial.print(g_picturesVertical, DEC);
+  Serial.println("]"); 
+  Serial.print("T["); 
+  Serial.print(g_picturesCount, DEC); 
+  Serial.print("/");
+  Serial.print(g_picturesTotal, DEC);
+  Serial.println("]"); 
+}
+
+void setup() 
+{
+  Serial.begin(115200);
+  Serial.println("Gigascan ready");
+  
+  pinMode(FOCUS_PIN, OUTPUT);
+  pinMode(SHUTTER_PIN, OUTPUT);  
+  digitalWrite(FOCUS_PIN, LOW);
+  digitalWrite(SHUTTER_PIN, LOW);
+  panStepper.setMaxSpeed(400.0);
+  panStepper.setAcceleration(300.0);
+  panStepper.setPinsInverted(true,false,false);
+  tiltStepper.setMaxSpeed(400.0);
+  tiltStepper.setAcceleration(300.0);
+  tiltStepper.setPinsInverted(false,false,false);
+  setupMenus();
+  updateScanner();
+}
+
+
 
 void loop()
 {
@@ -192,6 +249,7 @@ case Tasterselect:
     g_isTiltStepSetup = false;
   }  
   g_menuManager.DoMenuAction( MENU_ACTION_SELECT);
+  updateScanner();
   break;
 }
 case KEYPAD_NONE:
@@ -203,29 +261,37 @@ break;
     if (tiltStepper.distanceToGo() == 0)
       if (panStepper.distanceToGo() == 0)
       {
+        printScannerStats();
         if (g_takePicture) {
           triggerPicture();
+          g_picturesCount++;
         } else {
+          g_takePicture = true;          
           if (g_runTilt) {
-              g_scanCurrentTiltPosition = g_scanCurrentTiltPosition + g_tiltStepDeg;
-              tiltStepper.moveTo(g_scanCurrentTiltPosition * tilt_step_per_deg);
-              g_takePicture = true;
-              g_runTilt = false;            
+              g_scanPositionVertical++;
+              if (g_scanPositionVertical > g_picturesVertical-1) {
+                g_runScan = false;
+              } else {
+                tiltStepper.move(g_tiltStepDeg * tilt_step_per_deg);
+                
+                g_runTilt = false;
+              }
           } else if (g_runScanRight) {
-            g_scanCurrentPanPosition = g_scanCurrentPanPosition + g_panStepDeg;
-            if (g_scanCurrentPanPosition > g_maxPanRightDeg) {
+            g_scanPositionHorizontal++;
+            if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
               g_runScanRight = false;
               g_runTilt = true;
             }
+            panStepper.move(g_panStepDeg * pan_step_per_deg);
           } else {
-            g_scanCurrentPanPosition = g_scanCurrentPanPosition - g_panStepDeg;        
-            if (g_scanCurrentPanPosition < g_maxPanLeftDeg) {
+            g_scanPositionHorizontal--;        
+            if (g_scanPositionHorizontal <= 0) {
               g_runScanRight = true;
               g_runTilt = true;
             }
+            panStepper.move(-g_panStepDeg * pan_step_per_deg);
           }
-          panStepper.moveTo(g_scanCurrentPanPosition * pan_step_per_deg);
-          g_takePicture = true;
+          //g_takePicture = true;
         }
       }
   }
@@ -272,8 +338,8 @@ void runScanCallback( char* pMenuText, void*pUserData)
   g_runScanRight = true;
   g_runTilt = false;
   g_takePicture = true;
-  g_scanCurrentPanPosition = g_maxPanLeftDeg;
-  g_scanCurrentTiltPosition = g_maxTiltDownDeg;
+  g_scanPositionHorizontal = 0;
+  g_scanPositionVertical = 0;
   panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
   tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
 }
@@ -292,13 +358,6 @@ void setMaxPanRightCallback( char* pMenuText, void*pUserData)
   g_menuManager.DoIntInput( 0, 90, g_maxPanRightDeg, 1, &pLabel, 1, &g_maxPanRightDeg);
 }
 
-void setPanStepCallback( char* pMenuText, void*pUserData)
-{
-  char *pLabel = "Pan Step";
-  g_isPanStepSetup = true;
-  g_menuManager.DoIntInput( 0, 90, g_panStepDeg, 1, &pLabel, 1, &g_panStepDeg);  
-}
-
 void setMaxTiltUpCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "max Tilt Up";
@@ -310,15 +369,25 @@ void setMaxTiltDownCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "max Tilt Down";
   g_isMaxTiltDownSetup = true;
-  g_menuManager.DoIntInput( -90, 0, g_maxTiltDownDeg, 1, &pLabel, 1, &g_maxTiltDownDeg);  
+  g_menuManager.DoIntInput( -90, 0, g_maxTiltDownDeg, 1, &pLabel, 1, &g_maxTiltDownDeg);
 }
 
-void setTiltStepCallback( char* pMenuText, void*pUserData)
+void setFocalLength( char* pMenuText, void*pUserData)
 {
-  char *pLabel = "Tilt Step";
-  g_isTiltStepSetup = true;
-  g_menuManager.DoIntInput( 0, 90, g_tiltStepDeg, 1, &pLabel, 1, &g_tiltStepDeg);  
-  
+  char *pLabel = "Focal Length";
+  g_menuManager.DoIntInput( 1, 600, g_focalLength, 10, &pLabel, 1, &g_focalLength);
+}
+
+void setHOL( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "HOL";
+  g_menuManager.DoIntInput( 1, 99, g_hol, 1, &pLabel, 1, &g_hol);
+}
+
+void setVOL( char* pMenuText, void*pUserData)
+{
+  char *pLabel = "VOL";
+  g_menuManager.DoIntInput( 1, 99, g_vol, 1, &pLabel, 1, &g_vol);
 }
 
 void setTakePicturePreDelayCallback( char* pMenuText, void*pUserData)
