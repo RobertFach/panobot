@@ -3,7 +3,7 @@
 #include "MenuEntry.h"
 #include "MenuIntHelper.h"
 #include "MenuManager.h"
-#include "AccelStepper.h"
+#include <AccelStepper.h>
 #include <math.h>
 
 const int LCDRS = 8;
@@ -77,6 +77,20 @@ int blockedButton() {
 // |-Tilt Step
 // Run Scan
 // Credits
+
+void setMaxPanLeftCallback(char*, void*);
+void setMaxPanRightCallback(char*, void*);
+void setMaxTiltUpCallback(char*, void*);
+void setMaxTiltDownCallback(char*, void*);
+void setTakePicturePreDelayCallback(char*, void*);
+void setTakePictureDelayCallback(char*, void*);
+void setShutterDelayCallback(char*, void*);
+void takePictureCallback(char*, void*);
+void setFocalLength(char*, void*);
+void setHOL(char*, void*);
+void setVOL(char*, void*);
+void runScanCallback(char*, void*);
+int triggerPicture();
 
 void setupMenus()
 {
