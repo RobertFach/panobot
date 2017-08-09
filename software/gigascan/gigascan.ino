@@ -60,7 +60,7 @@ int blockedButton() {
 
   // if some key is pressed, disable presses for block_delay or repeat_delay if button is kept down
   if (current != KEYPAD_NONE)
-    _block_time = millis() + (current == _last_button ? 500 : 500);
+    _block_time = millis() + (current == _last_button ? 500 : 250);
 
   _last_button = current;
   return current;  
