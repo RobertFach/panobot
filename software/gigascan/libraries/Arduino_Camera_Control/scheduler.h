@@ -19,8 +19,12 @@ e-mail   :  support@circuitsathome.com
 
 #include <inttypes.h>
 #include <avr/pgmspace.h>
-#include <../Time/Time.h>
-#include "WProgram.h"
+#include <Time/Time.h>
+#if defined(ARDUINO) && ARDUINO >=100
+#include "Arduino.h"
+#else
+#include <WProgram.h>
+#endif
 
 #define DO_IT_FOREVER			0xFF
 #define INVALID_TASK_ID			0xFF

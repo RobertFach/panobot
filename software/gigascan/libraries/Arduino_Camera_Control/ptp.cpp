@@ -104,7 +104,11 @@ void Notify(const char* msg)
 	char c;
 
 	while((c = pgm_read_byte(msg++)))
+#if defined(ARDUINO) && ARDUINO >=100
+		Serial.write(c);
+#else
 		Serial.print(c,BYTE);
+#endif
 }
 
 void Message(const char* msg, uint16_t rcode = 0)

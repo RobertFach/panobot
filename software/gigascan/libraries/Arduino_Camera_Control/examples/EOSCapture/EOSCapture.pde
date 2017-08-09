@@ -11,8 +11,6 @@
 #include <ptp.h>
 #include <canoneos.h>
 
-#include <MemoryFree.h>
-
 #define DEV_ADDR        1
 
 // Canon EOS 400D
