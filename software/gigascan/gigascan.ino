@@ -161,8 +161,8 @@ double g_vfov = 0;
 void updateScanner() {
   g_hfov = degrees( 2 * atan2(g_sensorFF_horizontal, g_crop * 2 * g_focalLength));
   g_vfov = degrees( 2 * atan2(g_sensorFF_vertical, g_crop * 2 * g_focalLength));
-  g_panStepDeg = g_hfov * g_hol / 100;
-  g_tiltStepDeg = g_vfov * g_vol / 100;
+  g_panStepDeg = g_hfov * (100 - g_hol) / 100;
+  g_tiltStepDeg = g_vfov * (100 - g_vol) / 100;
   g_picturesHorizontal = ceil((abs(g_maxPanLeftDeg) + abs(g_maxPanRightDeg)) / g_panStepDeg);
   g_picturesVertical = ceil((abs(g_maxTiltUpDeg) + abs(g_maxTiltDownDeg)) / g_tiltStepDeg);
   g_picturesTotal = g_picturesHorizontal * g_picturesVertical;
