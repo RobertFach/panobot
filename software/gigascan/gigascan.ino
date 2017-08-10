@@ -362,14 +362,14 @@ void setMaxPanLeftCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "max Pan Left";
   g_isMaxPanLeftSetup = true;
-  g_menuManager.DoIntInput( -90, 0, g_maxPanLeftDeg, 1, &pLabel, 1, &g_maxPanLeftDeg);
+  g_menuManager.DoIntInput( -200, 0, g_maxPanLeftDeg, floor(g_panStepDeg), &pLabel, 1, &g_maxPanLeftDeg);
 }
 
 void setMaxPanRightCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "max Pan Right";
   g_isMaxPanRightSetup = true;
-  g_menuManager.DoIntInput( 0, 90, g_maxPanRightDeg, 1, &pLabel, 1, &g_maxPanRightDeg);
+  g_menuManager.DoIntInput( 0, 200, g_maxPanRightDeg, floor(g_panStepDeg), &pLabel, 1, &g_maxPanRightDeg);
 }
 
 void setMaxTiltUpCallback( char* pMenuText, void*pUserData)
