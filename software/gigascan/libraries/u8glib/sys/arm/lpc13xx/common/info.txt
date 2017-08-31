@@ -1,3 +1,0 @@
-http://www.nxp.com/products/microcontrollers/cortex_m3/LPC1313FBD48.html
-
-CMSIS from AN10900
