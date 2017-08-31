@@ -287,24 +287,27 @@ break;
                 g_runScan = false;
               } else {
                 tiltStepper.move(g_tiltStepDeg * tilt_step_per_deg);
-                
+		panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
+                g_runScanRight = true;  
                 g_runTilt = false;
               }
           } else if (g_runScanRight) {
             g_scanPositionHorizontal++;
             if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
               g_runScanRight = false;
+	      g_scanPositionHorizontal = 0;
               g_runTilt = true;
             }
             panStepper.move(g_panStepDeg * pan_step_per_deg);
-          } else {
-            g_scanPositionHorizontal--;        
-            if (g_scanPositionHorizontal <= 0) {
-              g_runScanRight = true;
-              g_runTilt = true;
-            }
-            panStepper.move(-g_panStepDeg * pan_step_per_deg);
-          }
+          } 
+//          else {
+//            g_scanPositionHorizontal--;        
+//            if (g_scanPositionHorizontal <= 0) {
+//              g_runScanRight = true;
+//              g_runTilt = true;
+//            }
+//            panStepper.move(-g_panStepDeg * pan_step_per_deg);
+//          }
           //g_takePicture = true;
         }
       }
