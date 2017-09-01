@@ -3,6 +3,7 @@ use <MCAD/bearing.scad>
 use <MCAD/nuts_and_bolts.scad>
 use <MCAD/motors.scad>
 include <MCAD/stepper.scad>
+include <MCAD/boxes.scad>
 
 $fn=100;
 
@@ -353,6 +354,57 @@ module quickmountclamp() {
     }    
 }
 
+module controllerbox() {
+    box_width = 100;
+    box_height = 115;
+    box_depth = 20;
+    box_cover_overlap = 5;
+    box_thickness = 2;
+    box_corners = 5;
+    difference() {
+        union() {
+            translate([0,0,(box_depth-2*box_cover_overlap)/2])roundedBox([box_width,box_height,box_depth-2*box_cover_overlap],box_corners,true);
+            translate([0,0,box_depth/2])roundedBox([box_width - 2*box_thickness,box_height - 2*box_thickness,box_depth],box_corners,true);
+        }
+        translate([0,0,box_depth/2+box_thickness])roundedBox([box_width-4*box_thickness,box_height - 4*box_thickness,box_depth],box_corners,true);
+      translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4.5,box_thickness+2.01])atmega();
+    }
+    //color("blue")translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4,4])atmega();
+      //mounts for atmega
+      translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4,4]){
+          translate([2.5,102-14,0])cylinder(d=5,h=5);
+          translate([7,102-66.5,0])cylinder(d=5,h=5);
+          translate([2.5,102-96.5,0])cylinder(d=5,h=5);
+          translate([52,102-16,0])cylinder(d=5,h=5);
+          translate([35,102-66.5,0])cylinder(d=5,h=5);
+          translate([52,102-90,0])cylinder(d=5,h=5);
+      }
+      translate([-box_width/2+2*box_thickness+3+54 + 2,-box_height/2+2*box_thickness+4,4]){
+          translate([2.5,100-2.5,0])cylinder(d=5,h=5);
+          translate([30-2.5,100-2.5,0])cylinder(d=5,h=5);
+          translate([2.5,100-97.5,0])cylinder(d=5,h=5);
+          translate([30-2.5,100-97.5,0])cylinder(d=5,h=5);          
+      }
+    //color("green")translate([-box_width/2+2*box_thickness+3+54 + 2,-box_height/2+2*box_thickness+4,4])cube([30,100,30]);
+    //color("red")translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4,4+30+5])cube([80,80,20]);
+}
+
+module atmega() {
+    union(){
+        //Mega2560
+        cube([54,102,16]);
+        translate([32,101.9,0])cube([13,7,16]);
+        translate([3.8,101.9,0])cube([9,3,16]);
+        //USB shield
+        translate([0,102-16-55,16])cube([54,55,11]);
+        //USB Cable/Connector +1mm
+        translate([13,102-16,16.5])cube([17,40,9]);
+        //mounts for atmega
+        translate([2.5,102-14,0])cylinder(d=5,h=5);
+        
+    }
+}
+
 //mountgear();
 //drivegear();
 //rotate([0,0,90])pan();
@@ -369,6 +421,7 @@ module quickmountclamp() {
 //tiltsteppermount();
 //rotate([0,0,180])tiltsteppermount();
 //pantiltconnector();
-camquickmount();
+//camquickmount();
 //quickmountclamp();
 //rotate([0,0,180])quickmountclamp();
+controllerbox();
