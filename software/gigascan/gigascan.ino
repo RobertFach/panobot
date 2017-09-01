@@ -60,7 +60,7 @@ int blockedButton() {
 
   // if some key is pressed, disable presses for block_delay or repeat_delay if button is kept down
   if (current != KEYPAD_NONE)
-    _block_time = millis() + (current == _last_button ? 500 : 500);
+    _block_time = millis() + (current == _last_button ? 500 : 250);
 
   _last_button = current;
   return current;  
@@ -135,7 +135,7 @@ int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
 double g_panStepDeg = 0;
-int tilt_step_per_deg = 7 * 8;
+int tilt_step_per_deg = 35;
 int g_maxTiltUpDeg = +10;
 int g_maxTiltDownDeg = -10;
 double g_tiltStepDeg = 0;
@@ -161,8 +161,8 @@ double g_vfov = 0;
 void updateScanner() {
   g_hfov = degrees( 2 * atan2(g_sensorFF_horizontal, g_crop * 2 * g_focalLength));
   g_vfov = degrees( 2 * atan2(g_sensorFF_vertical, g_crop * 2 * g_focalLength));
-  g_panStepDeg = g_hfov * g_hol / 100;
-  g_tiltStepDeg = g_vfov * g_vol / 100;
+  g_panStepDeg = g_hfov * (100 - g_hol) / 100;
+  g_tiltStepDeg = g_vfov * (100 - g_vol) / 100;
   g_picturesHorizontal = ceil((abs(g_maxPanLeftDeg) + abs(g_maxPanRightDeg)) / g_panStepDeg);
   g_picturesVertical = ceil((abs(g_maxTiltUpDeg) + abs(g_maxTiltDownDeg)) / g_tiltStepDeg);
   g_picturesTotal = g_picturesHorizontal * g_picturesVertical;
@@ -287,24 +287,27 @@ break;
                 g_runScan = false;
               } else {
                 tiltStepper.move(g_tiltStepDeg * tilt_step_per_deg);
-                
+		panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
+                g_runScanRight = true;  
                 g_runTilt = false;
               }
           } else if (g_runScanRight) {
             g_scanPositionHorizontal++;
             if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
               g_runScanRight = false;
+	      g_scanPositionHorizontal = 0;
               g_runTilt = true;
             }
             panStepper.move(g_panStepDeg * pan_step_per_deg);
-          } else {
-            g_scanPositionHorizontal--;        
-            if (g_scanPositionHorizontal <= 0) {
-              g_runScanRight = true;
-              g_runTilt = true;
-            }
-            panStepper.move(-g_panStepDeg * pan_step_per_deg);
-          }
+          } 
+//          else {
+//            g_scanPositionHorizontal--;        
+//            if (g_scanPositionHorizontal <= 0) {
+//              g_runScanRight = true;
+//              g_runTilt = true;
+//            }
+//            panStepper.move(-g_panStepDeg * pan_step_per_deg);
+//          }
           //g_takePicture = true;
         }
       }
@@ -362,14 +365,14 @@ void setMaxPanLeftCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "max Pan Left";
   g_isMaxPanLeftSetup = true;
-  g_menuManager.DoIntInput( -90, 0, g_maxPanLeftDeg, 1, &pLabel, 1, &g_maxPanLeftDeg);
+  g_menuManager.DoIntInput( -200, 0, g_maxPanLeftDeg, floor(g_panStepDeg), &pLabel, 1, &g_maxPanLeftDeg);
 }
 
 void setMaxPanRightCallback( char* pMenuText, void*pUserData)
 {
   char *pLabel = "max Pan Right";
   g_isMaxPanRightSetup = true;
-  g_menuManager.DoIntInput( 0, 90, g_maxPanRightDeg, 1, &pLabel, 1, &g_maxPanRightDeg);
+  g_menuManager.DoIntInput( 0, 200, g_maxPanRightDeg, floor(g_panStepDeg), &pLabel, 1, &g_maxPanRightDeg);
 }
 
 void setMaxTiltUpCallback( char* pMenuText, void*pUserData)
