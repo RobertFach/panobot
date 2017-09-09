@@ -1,0 +1,69 @@
+{
+    "description": "Use hardware Timer1 for finer PWM control and/or running an periodic interrupt function", 
+    "repository": {
+        "url": "https://github.com/PaulStoffregen/TimerOne", 
+        "type": "git"
+    }, 
+    "platforms": [
+        "atmelavr"
+    ], 
+    "export": {
+        "exclude": [
+            "extras", 
+            "docs", 
+            "tests", 
+            "test", 
+            "*.doxyfile", 
+            "*.pdf"
+        ], 
+        "include": null
+    }, 
+    "authors": [
+        {
+            "maintainer": false, 
+            "name": "Stoyko Dimitrov", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": false, 
+            "name": "Jesse Tane", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": false, 
+            "name": "J\u00e9r\u00f4me Despatis", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": false, 
+            "name": "Michael Polli", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": false, 
+            "name": "Dan Clemens", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": true, 
+            "name": "Paul Stoffregen", 
+            "url": null, 
+            "email": null
+        }
+    ], 
+    "keywords": [
+        "timing"
+    ], 
+    "id": 131, 
+    "name": "TimerOne", 
+    "frameworks": [
+        "arduino"
+    ], 
+    "version": "1.1", 
+    "homepage": "http://playground.arduino.cc/Code/Timer1"
+}

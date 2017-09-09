@@ -1,0 +1,53 @@
+{
+    "description": "Allows Arduino boards to control a variety of stepper motors.", 
+    "repository": {
+        "url": "https://github.com/waspinator/AccelStepper", 
+        "type": "git"
+    }, 
+    "platforms": [
+        "atmelavr", 
+        "atmelsam", 
+        "espressif8266", 
+        "intel_arc32", 
+        "microchippic32", 
+        "nordicnrf51", 
+        "teensy", 
+        "timsp430"
+    ], 
+    "export": {
+        "exclude": [
+            "extras", 
+            "docs", 
+            "tests", 
+            "test", 
+            "*.doxyfile", 
+            "*.pdf"
+        ], 
+        "include": null
+    }, 
+    "authors": [
+        {
+            "maintainer": false, 
+            "name": "Mike McCauley", 
+            "url": null, 
+            "email": "mikem@airspayce.com"
+        }, 
+        {
+            "maintainer": true, 
+            "name": "Patrick Wasp", 
+            "url": null, 
+            "email": "patrickwasp@gmail.com"
+        }
+    ], 
+    "keywords": [
+        "device", 
+        "control"
+    ], 
+    "id": 265, 
+    "name": "AccelStepper", 
+    "frameworks": [
+        "arduino"
+    ], 
+    "version": "1.57.1", 
+    "homepage": "http://www.airspayce.com/mikem/arduino/AccelStepper/"
+}
