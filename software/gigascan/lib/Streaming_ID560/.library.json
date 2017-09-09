@@ -1,0 +1,37 @@
+{
+    "name": "Streaming", 
+    "platforms": [
+        "atmelavr", 
+        "atmelsam", 
+        "espressif8266", 
+        "intel_arc32", 
+        "microchippic32", 
+        "nordicnrf51", 
+        "teensy", 
+        "timsp430"
+    ], 
+    "downloadUrl": "http://arduiniana.org/Streaming/Streaming5.zip", 
+    "frameworks": [
+        "arduino"
+    ], 
+    "version": "5", 
+    "export": {
+        "include": "Streaming"
+    }, 
+    "authors": [
+        {
+            "maintainer": false, 
+            "name": "Mikal Hart", 
+            "url": "http://arduiniana.org", 
+            "email": "mikal@arduiniana.org"
+        }
+    ], 
+    "keywords": [
+        "print", 
+        "output", 
+        "template", 
+        "operator"
+    ], 
+    "id": 560, 
+    "description": "Streaming C++-style Output with Operator <<"
+}

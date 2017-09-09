@@ -1,0 +1,58 @@
+{
+    "description": "Arduino Pin change monitor", 
+    "repository": {
+        "url": "https://github.com/neu-rah/PCINT", 
+        "type": "git"
+    }, 
+    "platforms": [
+        "atmelavr", 
+        "atmelsam", 
+        "espressif8266", 
+        "intel_arc32", 
+        "microchippic32", 
+        "nordicnrf51", 
+        "teensy", 
+        "timsp430"
+    ], 
+    "export": {
+        "exclude": [
+            "extras", 
+            "docs", 
+            "tests", 
+            "test", 
+            "*.doxyfile", 
+            "*.pdf"
+        ], 
+        "include": null
+    }, 
+    "authors": [
+        {
+            "maintainer": false, 
+            "name": "Rui Azevedo", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": true, 
+            "name": "ruihfazevedo@gmail.com", 
+            "url": null, 
+            "email": null
+        }, 
+        {
+            "maintainer": true, 
+            "name": "neu-rah", 
+            "url": null, 
+            "email": null
+        }
+    ], 
+    "keywords": [
+        "uncategorized"
+    ], 
+    "id": 1503, 
+    "name": "PCINT r-site.net", 
+    "frameworks": [
+        "arduino"
+    ], 
+    "version": "4.0.3", 
+    "homepage": null
+}
