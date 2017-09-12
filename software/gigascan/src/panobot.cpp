@@ -229,8 +229,7 @@ void setupPanoBot() {
   tiltStepper.setPinsInverted(false,false,false);
 }
 //Menu stuff
-
-U8G2_ST7920_128X64_F_SW_SPI u8g2(U8G2_R0, DISPLAY_CLOCK_PIN, DISPLAY_DATA_PIN, DISPLAY_CS_PIN, U8X8_PIN_NONE);
+U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, DISPLAY_CS_PIN, U8X8_PIN_NONE);
 
 result zZz() {Serial.println("zZz");return proceed;}
 
@@ -285,8 +284,6 @@ keyIn<2> encButton(encBtn_map);//1 is the number of keys
 Stream* in[]={&encStream,&encButton,&Serial};
 chainStream<3> sencoder(in);
 
-//MENU_INPUTS(in,&encStream,&encButton,&Serial);
-
 #define fontName u8g2_font_5x7_tf
 #define fontX 5
 #define fontY 8
@@ -336,11 +333,10 @@ void loop() {
   nav.doInput();
   if (nav.changed(0)) {//only draw if menu changed for gfx device
     //change checking leaves more time for other tasks
-    u8g2.firstPage();
-    do {
-      u8g2.drawStr(0, 8, "PANOBOT");
-      nav.doOutput();
-    } while(u8g2.nextPage());
+    u8g2.clearBuffer();
+    u8g2.drawStr(0, 8, "PANOBOT");
+    nav.doOutput();
+    u8g2.sendBuffer();
   }
   runScanService();
   panStepper.run();
