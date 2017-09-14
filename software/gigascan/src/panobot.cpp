@@ -57,6 +57,7 @@ boolean g_isTiltStepSetup = false;
 boolean g_runScanRight = false;
 boolean g_takePicture = false;
 boolean g_runTilt = false;
+boolean g_updateStatus = true;
 
 int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
@@ -102,6 +103,7 @@ void updateScanner() {
   Serial.print("g_picturesHorizontal: "); Serial.println(g_picturesHorizontal, DEC);
   Serial.print("g_picturesVertical: "); Serial.println(g_picturesVertical, DEC);
   Serial.print("g_picturesTotal: "); Serial.println(g_picturesTotal, DEC);
+  //g_updateStatus = true;
 }
 
 void updateMaxPanLeftPosition(eventMask e) {
@@ -147,6 +149,7 @@ void runScanCallback()
   g_takePicture = true;
   g_scanPositionHorizontal = 0;
   g_scanPositionVertical = 0;
+  g_updateStatus = true;
   panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
   tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
 }
@@ -190,10 +193,12 @@ void runScanService() {
         if (g_takePicture) {
           triggerPicture();
           g_picturesCount++;
+          g_updateStatus = true;
         } else {
           g_takePicture = true;
           if (g_runTilt) {
               g_scanPositionVertical++;
+              g_updateStatus = true;
               if (g_scanPositionVertical > g_picturesVertical-1) {
                 g_runScan = false;
               } else {
@@ -204,6 +209,7 @@ void runScanService() {
               }
           } else if (g_runScanRight) {
             g_scanPositionHorizontal++;
+            g_updateStatus = true;
             if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
               g_runScanRight = false;
 	            g_scanPositionHorizontal = 0;
@@ -227,6 +233,8 @@ void setupPanoBot() {
   tiltStepper.setMaxSpeed(400.0);
   tiltStepper.setAcceleration(300.0);
   tiltStepper.setPinsInverted(false,false,false);
+  updateScanner();
+  g_updateStatus = true;
 }
 //Menu stuff
 U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, DISPLAY_CS_PIN, U8X8_PIN_NONE);
@@ -248,9 +256,9 @@ MENU(subMenuSetup,"Setup",showEvent,anyEvent,noStyle
   ,FIELD(g_takePicturePreDelay,"Image P-Delay","ms",0,5000,1000,100,doNothing,noEvent,wrapStyle)
   ,FIELD(g_takePictureDelay,   "Image Delay  ","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
   ,FIELD(g_shutterDelay,       "Shutter Delay","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_focalLength,        "Focal Length ","mm",1,1000,10,1,updateScanner,exitEvent,wrapStyle)
-  ,FIELD(g_hol,                "Hor. Overlap ","%",0,100,10,1,updateScanner,exitEvent,wrapStyle)
-  ,FIELD(g_vol,                "Ver. Overlap ","%",0,100,10,1,updateScanner,exitEvent,wrapStyle)
+  ,FIELD(g_focalLength,        "Focal Length ","mm",1,1000,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_hol,                "Hor. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_vol,                "Ver. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
   ,EXIT("<Back")
 );
 
@@ -312,6 +320,27 @@ result idle(menuOut& o,idleEvent e) {
 
 config myOptions('*','-',false,false,defaultNavCodes);
 
+void drawStatus() {
+  enum {BufSize=128/fontX};
+  char buf1[BufSize];
+  char buf2[BufSize];
+  snprintf (buf1, BufSize, "H[%02d/%02d]V[%02d/%02d]",
+  g_scanPositionHorizontal+1,
+  g_picturesHorizontal,
+  g_scanPositionVertical+1,
+  g_picturesVertical,
+  g_picturesCount,
+  g_picturesTotal
+  );
+  snprintf (buf2, BufSize, "T[%03d/%03d]",
+  g_picturesCount,
+  g_picturesTotal
+  );
+  u8g2.drawStr(128 - fontX * strlen(buf1), 8, buf1);
+  u8g2.drawStr(128 - fontX * strlen(buf2), 16, buf2);
+  g_updateStatus = false;
+}
+
 void setup() {
   options = &myOptions;
   pinMode(LEDPIN,OUTPUT);
@@ -331,11 +360,11 @@ void setup() {
 
 void loop() {
   nav.doInput();
-  if (nav.changed(0)) {//only draw if menu changed for gfx device
+  if (nav.changed(0) || g_updateStatus) {//only draw if menu changed for gfx device
     //change checking leaves more time for other tasks
     u8g2.clearBuffer();
-    u8g2.drawStr(0, 8, "PANOBOT");
     nav.doOutput();
+    drawStatus();
     u8g2.sendBuffer();
   }
   runScanService();
