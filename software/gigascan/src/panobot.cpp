@@ -1,27 +1,21 @@
+/* Copyright (C) 2017 Robert Fach All rights reserved.
+
+This software may be distributed and modified under the terms of the GNU
+General Public License version 2 (GPL2) as published by the Free Software
+Foundation and appearing in the file GPL2.TXT included in the packaging of
+this file. Please note that GPL2 Section 2[b] requires that all works based
+on this software must also be made publicly available under the terms of
+the GPL2 ("Copyleft").
+
+Contact information
+-------------------
+
+Robert Fach
+e-mail   :  robert.fach@gmx.net
+*/
+
 #include <Arduino.h>
 #include <Streaming.h>
-
-/********************
-Arduino generic menu system
-U8G2 menu example
-U8G2: https://github.com/olikraus/u8g2
-
-Oct. 2016 Stephen Denne https://github.com/datacute
-Based on example from Rui Azevedo - ruihfazevedo(@rrob@)gmail.com
-Original from: https://github.com/christophepersoz
-creative commons license 3.0: Attribution-ShareAlike CC BY-SA
-This software is furnished "as is", without technical support, and with no
-warranty, express or implied, as to its usefulness for any purpose.
-
-Thread Safe: No
-Extensible: Yes
-
-menu on U8G2 device
-output: Wemos D1 mini OLED Shield (SSD1306 64x48 I2C) + Serial
-input: Serial
-platform: espressif8266
-
-*/
 
 #ifdef ESP8266
   #define typeof(x) __typeof__(x)
@@ -279,6 +273,7 @@ MENU(subMenuSetup,"Setup",doNothing,noEvent,noStyle
   ,FIELD(g_focalLength,        "Focal Length ","mm",1,1000,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
   ,FIELD(g_hol,                "Hor. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
   ,FIELD(g_vol,                "Ver. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
+  ,FIELD(g_crop,               "Crop Factor  ","",0,10,0.1,0.01,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
   ,EXIT("<Back")
 );
 
