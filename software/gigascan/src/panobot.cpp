@@ -86,6 +86,8 @@ int g_vol = 30;
 double g_hfov = 0;
 double g_vfov = 0;
 
+
+//callback function used by the menu to do the math when updating some values
 void updateScanner() {
   g_hfov = degrees( 2 * atan2(g_sensorFF_horizontal, g_crop * 2 * g_focalLength));
   g_vfov = degrees( 2 * atan2(g_sensorFF_vertical, g_crop * 2 * g_focalLength));
@@ -172,6 +174,7 @@ void printScannerStats() {
   Serial.println("]");
 }
 
+//this code is ugly, but it works
 void triggerPicture()
 {
   digitalWrite(FOCUS_PIN, HIGH);
@@ -184,6 +187,7 @@ void triggerPicture()
   g_takePicture = false;
 }
 
+//this is also ugly, but also works :)
 void runScanService() {
   if (g_runScan) {
     if (tiltStepper.distanceToGo() == 0)
@@ -222,6 +226,7 @@ void runScanService() {
   }
 }
 
+//initializes everything which is bot related
 void setupPanoBot() {
   pinMode(FOCUS_PIN, OUTPUT);
   pinMode(SHUTTER_PIN, OUTPUT);
@@ -236,38 +241,8 @@ void setupPanoBot() {
   updateScanner();
   g_updateStatus = true;
 }
-//Menu stuff
-U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, DISPLAY_CS_PIN, U8X8_PIN_NONE);
 
-result zZz() {Serial.println("zZz");return proceed;}
-
-result showEvent(eventMask e,navNode& nav,prompt& item) {
-  Serial.print("event: ");
-  Serial.println(e);
-  return proceed;
-}
-
-// Panobot Setup Menu
-MENU(subMenuSetup,"Setup",showEvent,anyEvent,noStyle
-  ,FIELD(g_maxPanLeftDeg,      "Pan Left     ","DEG",-200,0,10,1,updateMaxPanLeftPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_maxPanRightDeg,     "Pan Right    ","DEG",0,200,10,1,updateMaxPanRightPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_maxTiltUpDeg,       "Tilt UP      ","DEG",0,100,10,1,updateMaxTiltUpPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_maxTiltDownDeg,     "Tilt Down    ","DEG",-90,0,10,1,updateMaxTiltDownPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_takePicturePreDelay,"Image P-Delay","ms",0,5000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_takePictureDelay,   "Image Delay  ","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_shutterDelay,       "Shutter Delay","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_focalLength,        "Focal Length ","mm",1,1000,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_hol,                "Hor. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_vol,                "Ver. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
-  ,EXIT("<Back")
-);
-
-MENU(mainMenu,"Main menu",zZz,noEvent,noStyle
-  ,OP("Scan",runScanCallback,enterEvent)
-  ,OP("Take Picture",triggerPicture,enterEvent)
-  ,SUBMENU(subMenuSetup)
-  ,EXIT("<Back")
-);
+//Panobot MENU system, it uses ArduinoMenu library in combination with U8g2
 
 // define menu colors --------------------------------------------------------
 //each color is in the format:
@@ -282,44 +257,58 @@ const colorDef<uint8_t> colors[] MEMMODE={
   {{0,0},{1,1,1}},//titleColor
 };
 
-encoderIn<ENCODER_A_PIN,ENCODER_B_PIN> encoder;//simple quad encoder driver
-encoderInStream<ENCODER_A_PIN,ENCODER_B_PIN> encStream(encoder,4);// simple quad encoder fake Stream
-
-//a keyboard with only one key as the encoder button
-keyMap encBtn_map[]={{ENCODER_BTN_PIN,options->getCmdChar(enterCmd)},{DISPLAY_RESET_BTN_PIN,options->getCmdChar(enterCmd)}};//negative pin numbers use internal pull-up, this is on when low
-keyIn<2> encButton(encBtn_map);//1 is the number of keys
-
-Stream* in[]={&encStream,&encButton,&Serial};
-chainStream<3> sencoder(in);
-
 #define fontName u8g2_font_5x7_tf
 #define fontX 5
 #define fontY 8
-#define offsetX 12
-#define offsetY 16
+#define offsetX 5
+#define offsetY 32
 #define MAX_DEPTH 2
 
-//this macro replaces all the above commented lines
+//initialize SmartLCD display, hardware SPI
+U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, DISPLAY_CS_PIN, U8X8_PIN_NONE);
+
+// Panobot Setup Menu
+MENU(subMenuSetup,"Setup",doNothing,noEvent,noStyle
+  ,FIELD(g_maxPanLeftDeg,      "Pan Left     ","DEG",-200,0,10,1,updateMaxPanLeftPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_maxPanRightDeg,     "Pan Right    ","DEG",0,200,10,1,updateMaxPanRightPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_maxTiltUpDeg,       "Tilt UP      ","DEG",0,100,10,1,updateMaxTiltUpPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_maxTiltDownDeg,     "Tilt Down    ","DEG",-90,0,10,1,updateMaxTiltDownPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_takePicturePreDelay,"Image P-Delay","ms",0,5000,1000,100,doNothing,noEvent,wrapStyle)
+  ,FIELD(g_takePictureDelay,   "Image Delay  ","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
+  ,FIELD(g_shutterDelay,       "Shutter Delay","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
+  ,FIELD(g_focalLength,        "Focal Length ","mm",1,1000,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_hol,                "Hor. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(g_vol,                "Ver. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
+  ,EXIT("<Back")
+);
+
+//Panobot Main Menu
+MENU(mainMenu,"Main menu",doNothing,noEvent,noStyle
+  ,OP("Scan",runScanCallback,enterEvent)
+  ,OP("Take Picture",triggerPicture,enterEvent)
+  ,SUBMENU(subMenuSetup)
+);
+
+//SmartLCD encoder driver
+encoderIn<ENCODER_A_PIN,ENCODER_B_PIN> encoder;
+encoderInStream<ENCODER_A_PIN,ENCODER_B_PIN> encStream(encoder,4);
+//SmartLCD encoder key and reset button routed to the same "enter" command
+keyMap encBtn_map[]={{ENCODER_BTN_PIN,options->getCmdChar(enterCmd)},{DISPLAY_RESET_BTN_PIN,options->getCmdChar(enterCmd)}};//negative pin numbers use internal pull-up, this is on when low
+keyIn<2> encButton(encBtn_map);
+//combine all streams as input streams
+Stream* in[]={&encStream,&encButton,&Serial};
+chainStream<3> sencoder(in);
+
 MENU_OUTPUTS(out,MAX_DEPTH
-  ,U8G2_OUT(u8g2,colors,fontX,fontY,offsetX,offsetY,{0,0,128/fontX,48/fontY})
+  ,U8G2_OUT(u8g2,colors,fontX,fontY,offsetX,offsetY,{0,0,(128-2*offsetX)/fontX,32/fontY})
   ,SERIAL_OUT(Serial)
 );
 
 NAVROOT(nav,mainMenu,MAX_DEPTH,sencoder,out);
 
-//when menu is suspended
-result idle(menuOut& o,idleEvent e) {
-  o.clear();
-  switch(e) {
-    case idleStart:o.println("suspending menu!");break;
-    case idling:o.println("suspended...");break;
-    case idleEnd:o.println("resuming menu.");break;
-  }
-  return proceed;
-}
-
 config myOptions('*','-',false,false,defaultNavCodes);
 
+//this function writes the Panobot status to the LCD
 void drawStatus() {
   enum {BufSize=128/fontX};
   char buf1[BufSize];
@@ -328,9 +317,7 @@ void drawStatus() {
   g_scanPositionHorizontal+1,
   g_picturesHorizontal,
   g_scanPositionVertical+1,
-  g_picturesVertical,
-  g_picturesCount,
-  g_picturesTotal
+  g_picturesVertical
   );
   snprintf (buf2, BufSize, "T[%03d/%03d]",
   g_picturesCount,
@@ -343,27 +330,31 @@ void drawStatus() {
 
 void setup() {
   options = &myOptions;
-  pinMode(LEDPIN,OUTPUT);
+  //initialize Serial interface
   Serial.begin(115200);
   while(!Serial);
   Serial.println("Panobot");Serial.flush();
+  //initialize menu
   u8g2.begin();
   u8g2.setFont(fontName);
-
-  nav.idleTask=idle;//point a function to be used when menu is suspended
-
   encButton.begin();
   encoder.begin();
-
+  //initialize bot
   setupPanoBot();
 }
 
 void loop() {
   nav.doInput();
-  if (nav.changed(0) || g_updateStatus) {//only draw if menu changed for gfx device
-    //change checking leaves more time for other tasks
+  if (nav.changed(0) || g_updateStatus) {
     u8g2.clearBuffer();
     nav.doOutput();
+    //this fixes?? an issue with ArduinoMenu, when the Cursor is over the last entry in a Menu,
+    //the color mode/draw is set to XOR?? -> issue bug/question report
+    u8g2.setFontMode(1);
+    u8g2.setDrawColor(1);
+    u8g2.setFont(u8g2_font_ncenB12_tr);
+    u8g2.drawStr(0, 32, "PANOBOT");
+    u8g2.setFont(fontName);
     drawStatus();
     u8g2.sendBuffer();
   }
