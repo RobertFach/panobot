@@ -1,0 +1,13 @@
+{
+  "name": "ArduinoMenu",
+  "keywords": "Arduino, Menu, System, IO, Graphics, LCD, Encoder, Serial, interactivity",
+  "description": "AVR generic menu/interactivity system",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/neu-rah/ArduinoMenu",
+    "branch": "dev"
+  },
+  "frameworks": "arduino",
+  "platforms": "*"
+}

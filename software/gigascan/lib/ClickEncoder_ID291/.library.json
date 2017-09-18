@@ -1,0 +1,32 @@
+{
+    "name": "ClickEncoder", 
+    "repository": {
+        "url": "https://github.com/soligen2010/encoder.git", 
+        "type": "git"
+    }, 
+    "platforms": [
+        "atmelavr", 
+        "atmelsam", 
+        "teensy", 
+        "espressif8266"
+    ], 
+    "frameworks": [
+        "arduino"
+    ], 
+    "version": "4b3b30bf1c", 
+    "authors": [
+        {
+            "maintainer": false, 
+            "name": "Dennis", 
+            "url": "https://github.com/soligen2010", 
+            "email": null
+        }
+    ], 
+    "keywords": [
+        "input", 
+        "button", 
+        "encoder"
+    ], 
+    "id": 291, 
+    "description": "Arduino library to handle rotary encoders with buttons as a user input device"
+}
