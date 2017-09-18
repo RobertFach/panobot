@@ -361,14 +361,16 @@ module controllerbox() {
     box_cover_overlap = 5;
     box_thickness = 2;
     box_corners = 5;
-    difference() {
-        union() {
-            translate([0,0,(box_depth-2*box_cover_overlap)/2])roundedBox([box_width,box_height,box_depth-2*box_cover_overlap],box_corners,true);
-            translate([0,0,box_depth/2])roundedBox([box_width - 2*box_thickness,box_height - 2*box_thickness,box_depth],box_corners,true);
+    
+    union() {
+        difference() {
+            union() {
+                translate([0,0,(box_depth-2*box_cover_overlap)/2])roundedBox([box_width,box_height,box_depth-2*box_cover_overlap],box_corners,true);
+                translate([0,0,box_depth/2])roundedBox([box_width - 2*box_thickness,box_height - 2*box_thickness,box_depth],box_corners,true);
+            }
+            translate([0,0,box_depth/2+box_thickness])roundedBox([box_width-4*box_thickness,box_height - 4*box_thickness,box_depth],box_corners,true);
+          translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4.5,box_thickness+2.01])atmega();
         }
-        translate([0,0,box_depth/2+box_thickness])roundedBox([box_width-4*box_thickness,box_height - 4*box_thickness,box_depth],box_corners,true);
-      translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4.5,box_thickness+2.01])atmega();
-    }
     //color("blue")translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4,4])atmega();
       //mounts for atmega
       translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4,4]){
@@ -385,8 +387,43 @@ module controllerbox() {
           translate([2.5,100-97.5,0])cylinder(d=5,h=5);
           translate([30-2.5,100-97.5,0])cylinder(d=5,h=5);          
       }
+  }
     //color("green")translate([-box_width/2+2*box_thickness+3+54 + 2,-box_height/2+2*box_thickness+4,4])cube([30,100,30]);
     //color("red")translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4,4+30+5])cube([80,80,20]);
+
+}
+
+module controllerbox_cover() {
+    box_width = 100;
+    box_height = 115;
+    box_depth = 20;
+    box_cover_overlap = 5;
+    box_thickness = 2;
+    box_corners = 5;
+    
+    box_depth_cover = 65;
+
+    difference() {   
+        union() {
+            difference() {
+                union() {
+                    translate([0,0,box_depth-2*box_cover_overlap+box_depth_cover/2])roundedBox([box_width,box_height,box_depth_cover],box_corners,true);
+                }
+                controllerbox();
+                translate([0,0,box_depth/2+box_thickness-5])roundedBox([box_width-4*box_thickness+0.01,box_height - 4*box_thickness+0.01,box_depth_cover*2],box_corners,true);
+          translate([-box_width/2+2*box_thickness+3,-box_height/2+2*box_thickness+4.5,box_thickness+2.01])atmega();
+                
+                //70mm for cooling
+                cylinder(d=70,h=4*box_depth_cover);
+                //71mm for cooling screws
+                translate([71/2,71/2,0])cylinder(d=3,h=4*box_depth_cover);
+                translate([-71/2,71/2,0])cylinder(d=3,h=4*box_depth_cover);
+                translate([71/2,-71/2,0])cylinder(d=3,h=4*box_depth_cover);
+                translate([-71/2,-71/2,0])cylinder(d=3,h=4*box_depth_cover);
+                
+            }
+        }  
+    }     
 }
 
 module atmega() {
@@ -424,4 +461,5 @@ module atmega() {
 //camquickmount();
 //quickmountclamp();
 //rotate([0,0,180])quickmountclamp();
-controllerbox();
+//controllerbox();
+controllerbox_cover();
