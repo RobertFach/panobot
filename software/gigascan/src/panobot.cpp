@@ -53,11 +53,15 @@ boolean g_takePicture = false;
 boolean g_runTilt = false;
 boolean g_updateStatus = true;
 
+double g_maxPanSpeed = 400.0;
+double g_maxPanAccel = 300.0;
+double g_maxTiltSpeed = 400.0;
+double g_maxTiltAccel = 300.0;
 int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
 double g_panStepDeg = 0;
-int tilt_step_per_deg = 35;
+int tilt_step_per_deg = 50; // small gear 35;
 int g_maxTiltUpDeg = +10;
 int g_maxTiltDownDeg = -10;
 double g_tiltStepDeg = 0;
@@ -226,11 +230,11 @@ void setupPanoBot() {
   pinMode(SHUTTER_PIN, OUTPUT);
   digitalWrite(FOCUS_PIN, LOW);
   digitalWrite(SHUTTER_PIN, LOW);
-  panStepper.setMaxSpeed(400.0);
-  panStepper.setAcceleration(300.0);
+  panStepper.setMaxSpeed(g_maxPanSpeed);
+  panStepper.setAcceleration(g_maxPanAccel);
   panStepper.setPinsInverted(true,false,false);
-  tiltStepper.setMaxSpeed(400.0);
-  tiltStepper.setAcceleration(300.0);
+  tiltStepper.setMaxSpeed(g_maxTiltSpeed);
+  tiltStepper.setAcceleration(g_maxTiltAccel);
   tiltStepper.setPinsInverted(false,false,false);
   updateScanner();
   g_updateStatus = true;
@@ -277,11 +281,22 @@ MENU(subMenuSetup,"Setup",doNothing,noEvent,noStyle
   ,EXIT("<Back")
 );
 
+MENU(subMenuHardware,"Hardware",doNothing,noEvent,noStyle
+  ,FIELD(pan_step_per_deg,  "PAN  ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
+  ,FIELD(tilt_step_per_deg, "TILT ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
+  ,FIELD(g_maxPanSpeed,     "Pan  Speed", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
+  ,FIELD(g_maxPanAccel,     "Pan  Accel", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
+  ,FIELD(g_maxTiltSpeed,    "Tilt Speed", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
+  ,FIELD(g_maxTiltAccel,    "Tilt Accel", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
+  ,EXIT("<Back")
+)
+
 //Panobot Main Menu
 MENU(mainMenu,"Main menu",doNothing,noEvent,noStyle
   ,OP("Scan",runScanCallback,enterEvent)
   ,OP("Take Picture",triggerPicture,enterEvent)
   ,SUBMENU(subMenuSetup)
+  ,SUBMENU(subMenuHardware)
 );
 
 //SmartLCD encoder driver
