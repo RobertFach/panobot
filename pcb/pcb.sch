@@ -652,15 +652,15 @@ Wire Wire Line
 Text Label 7000 1200 0    60   ~ 0
 24
 Text Label 7000 1100 0    60   ~ 0
-25
+22
 Wire Wire Line
 	6750 2650 7100 2650
 Wire Wire Line
 	6750 2750 7100 2750
 Text Label 6950 2750 0    60   ~ 0
-26
+28
 Text Label 6950 2650 0    60   ~ 0
-27
+26
 Wire Wire Line
 	6750 2850 6750 2950
 Wire Wire Line
@@ -728,7 +728,7 @@ Text Label 1950 5700 0    60   ~ 0
 Wire Wire Line
 	1750 6900 2100 6900
 Text Label 1950 6900 0    60   ~ 0
-45
+49
 Wire Wire Line
 	1250 6700 950  6700
 Wire Wire Line
@@ -740,7 +740,7 @@ A9
 Wire Wire Line
 	1750 5800 2100 5800
 Text Label 1950 5800 0    60   ~ 0
-34
+46
 Wire Wire Line
 	1250 5800 950  5800
 Wire Wire Line
@@ -980,7 +980,7 @@ External Power Supply
 Wire Wire Line
 	1250 5700 950  5700
 Text Label 1000 5700 0    60   ~ 0
-43
+48
 $Comp
 L LTV-827 U4
 U 1 1 59F5EE68
@@ -1421,9 +1421,9 @@ focus
 Text Label 3950 6400 0    60   ~ 0
 shutter
 Text Label 5950 6500 0    60   ~ 0
-22
+32
 Text Label 5950 6800 0    60   ~ 0
-23
+30
 Text Notes 5750 650  0    60   ~ 0
 Motion/Stepper Control
 $Comp
@@ -1481,10 +1481,10 @@ Serial Aux
 Wire Notes Line
 	5400 4100 5400 5300
 $Comp
-L Conn_02x06_Odd_Even J?
+L Conn_02x06_Odd_Even J10
 U 1 1 59F6901C
 P 6150 4800
-F 0 "J?" H 6200 5100 50  0000 C CNN
+F 0 "J10" H 6200 5100 50  0000 C CNN
 F 1 "Conn_02x06_Odd_Even" H 6200 4400 50  0000 C CNN
 F 2 "" H 6150 4800 50  0001 C CNN
 F 3 "" H 6150 4800 50  0001 C CNN
@@ -1516,10 +1516,10 @@ A14
 Text Label 5650 5100 0    60   ~ 0
 +5V
 $Comp
-L GND #PWR?
+L GND #PWR018
 U 1 1 59F69D09
 P 6800 5100
-F 0 "#PWR?" H 6800 4850 50  0001 C CNN
+F 0 "#PWR018" H 6800 4850 50  0001 C CNN
 F 1 "GND" H 6800 4950 50  0000 C CNN
 F 2 "" H 6800 5100 50  0001 C CNN
 F 3 "" H 6800 5100 50  0001 C CNN
@@ -1539,15 +1539,15 @@ Wire Wire Line
 Wire Wire Line
 	6450 5000 6800 5000
 Text Label 6600 4600 0    60   ~ 0
-40
+34
 Text Label 6600 4700 0    60   ~ 0
-41
+35
 Text Label 6600 4800 0    60   ~ 0
-42
+36
 Text Label 6600 4900 0    60   ~ 0
-43
+37
 Text Label 6600 5000 0    60   ~ 0
-44
+38
 Text Notes 6050 4250 0    60   ~ 0
 I/O Aux
 $EndSCHEMATC
