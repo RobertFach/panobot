@@ -53,10 +53,10 @@ boolean g_takePicture = false;
 boolean g_runTilt = false;
 boolean g_updateStatus = true;
 
-double g_maxPanSpeed = 400.0;
-double g_maxPanAccel = 300.0;
-double g_maxTiltSpeed = 400.0;
-double g_maxTiltAccel = 300.0;
+double g_maxPanSpeed = 3000.0;
+double g_maxPanAccel = 2000.0;
+double g_maxTiltSpeed = 2000.0;
+double g_maxTiltAccel = 2000.0;
 int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
@@ -224,18 +224,22 @@ void runScanService() {
   }
 }
 
-//initializes everything which is bot related
-void setupPanoBot() {
-  pinMode(FOCUS_PIN, OUTPUT);
-  pinMode(SHUTTER_PIN, OUTPUT);
-  digitalWrite(FOCUS_PIN, LOW);
-  digitalWrite(SHUTTER_PIN, LOW);
+void initializeSteppers() {
   panStepper.setMaxSpeed(g_maxPanSpeed);
   panStepper.setAcceleration(g_maxPanAccel);
   panStepper.setPinsInverted(true,false,false);
   tiltStepper.setMaxSpeed(g_maxTiltSpeed);
   tiltStepper.setAcceleration(g_maxTiltAccel);
   tiltStepper.setPinsInverted(false,false,false);
+}
+
+//initializes everything which is bot related
+void setupPanoBot() {
+  pinMode(FOCUS_PIN, OUTPUT);
+  pinMode(SHUTTER_PIN, OUTPUT);
+  digitalWrite(FOCUS_PIN, LOW);
+  digitalWrite(SHUTTER_PIN, LOW);
+  initializeSteppers();
   updateScanner();
   g_updateStatus = true;
 }
@@ -284,10 +288,10 @@ MENU(subMenuSetup,"Setup",doNothing,noEvent,noStyle
 MENU(subMenuHardware,"Hardware",doNothing,noEvent,noStyle
   ,FIELD(pan_step_per_deg,  "PAN  ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
   ,FIELD(tilt_step_per_deg, "TILT ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
-  ,FIELD(g_maxPanSpeed,     "Pan  Speed", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
-  ,FIELD(g_maxPanAccel,     "Pan  Accel", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
-  ,FIELD(g_maxTiltSpeed,    "Tilt Speed", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
-  ,FIELD(g_maxTiltAccel,    "Tilt Accel", "", 0, 500, 10, 1, doNothing, noEvent, wrapStyle)
+  ,FIELD(g_maxPanSpeed,     "Pan  Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(g_maxPanAccel,     "Pan  Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(g_maxTiltSpeed,    "Tilt Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(g_maxTiltAccel,    "Tilt Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
   ,EXIT("<Back")
 )
 
