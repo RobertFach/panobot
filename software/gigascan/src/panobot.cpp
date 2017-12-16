@@ -48,9 +48,6 @@ boolean g_isPanStepSetup = false;
 boolean g_isMaxTiltUpSetup = false;
 boolean g_isMaxTiltDownSetup = false;
 boolean g_isTiltStepSetup = false;
-boolean g_runScanRight = false;
-boolean g_takePicture = false;
-boolean g_runTilt = false;
 boolean g_updateStatus = true;
 
 double g_maxPanSpeed = 3000.0;
@@ -74,6 +71,8 @@ int g_picturesTotal = 0;
 int g_takePictureDelay = 250;
 int g_takePicturePreDelay = 0;
 int g_shutterDelay = 500;
+double panPos = 0;
+double tiltPos = 0;
 
 double g_crop = 1.6;
 double g_sensorFF_horizontal = 36.0;
@@ -144,14 +143,9 @@ void updateMaxTiltDownPosition(eventMask e) {
 void runScanCallback()
 {
   g_runScan = true;
-  g_runScanRight = true;
-  g_runTilt = false;
-  g_takePicture = true;
   g_scanPositionHorizontal = 0;
   g_scanPositionVertical = 0;
   g_updateStatus = true;
-  panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
-  tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
 }
 
 void printScannerStats() {
@@ -172,55 +166,90 @@ void printScannerStats() {
   Serial.println("]");
 }
 
-//this code is ugly, but it works
-void triggerPicture()
-{
-  digitalWrite(FOCUS_PIN, HIGH);
-  delay(g_takePicturePreDelay);
-  digitalWrite(SHUTTER_PIN, HIGH);
-  delay(g_shutterDelay);
-  digitalWrite(FOCUS_PIN, LOW);
-  digitalWrite(SHUTTER_PIN, LOW);
-  delay(g_takePictureDelay);
-  g_takePicture = false;
-}
+typedef enum {
+  IDLE,
+  POSITIONING,
+  STABILIZE_WAIT,
+  FOCUS_WAIT,
+  TRIGGER_WAIT
+} eSystemState;
 
-//this is also ugly, but also works :)
-void runScanService() {
-  if (g_runScan) {
-    if (tiltStepper.distanceToGo() == 0)
-      if (panStepper.distanceToGo() == 0)
-      {
-        printScannerStats();
-        if (g_takePicture) {
-          triggerPicture();
-          g_picturesCount++;
-          g_updateStatus = true;
-        } else {
-          g_takePicture = true;
-          if (g_runTilt) {
-              g_scanPositionVertical++;
-              g_updateStatus = true;
-              if (g_scanPositionVertical > g_picturesVertical-1) {
-                g_runScan = false;
-              } else {
-                tiltStepper.move(g_tiltStepDeg * tilt_step_per_deg);
-		            panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
-                g_runScanRight = true;
-                g_runTilt = false;
-              }
-          } else if (g_runScanRight) {
-            g_scanPositionHorizontal++;
-            g_updateStatus = true;
-            if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
-              g_runScanRight = false;
-	            g_scanPositionHorizontal = 0;
-              g_runTilt = true;
-            }
-            panStepper.move(g_panStepDeg * pan_step_per_deg);
+typedef enum {
+  ZICK_ZACK_LEFT_RIGHT_DOWN_UP
+} eSystemModePattern;
+
+eSystemState state = IDLE;
+eSystemModePattern modePattern = ZICK_ZACK_LEFT_RIGHT_DOWN_UP;
+long delayTime = 0;
+long startTime = 0;
+
+eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
+   if (state == IDLE) {
+      if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
+        g_updateStatus = true;
+        panPos = g_maxPanLeftDeg;
+        tiltPos = g_maxTiltDownDeg;
+      }
+   } else {
+      if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
+        g_updateStatus = true;
+        if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
+          if (g_scanPositionVertical >= g_picturesVertical-1) {
+            g_runScan = false;
+            return IDLE;
+          } else {
+            tiltPos += g_tiltStepDeg;
           }
+          panPos = g_maxPanLeftDeg;
+          g_scanPositionHorizontal = 0;
+          g_scanPositionVertical++;
+        } else {
+          panPos += g_panStepDeg;
+          g_scanPositionHorizontal++;
         }
       }
+   }
+   tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
+   panStepper.moveTo(panPos * pan_step_per_deg);
+   return POSITIONING;
+}
+
+void stateMachine() {
+  if (state == IDLE && g_runScan) {
+    state = updatePosition(state, modePattern);
+  }
+  if (state == POSITIONING) {
+    if (tiltStepper.distanceToGo() == 0 && panStepper.distanceToGo() == 0) {
+      delayTime = g_takePictureDelay;
+      startTime = millis();
+      state = STABILIZE_WAIT;
+    }
+  }
+  if (state == STABILIZE_WAIT) {
+    if (millis() - startTime > delayTime) {
+      digitalWrite(FOCUS_PIN, HIGH);
+      delayTime = g_takePicturePreDelay;
+      startTime = millis();
+      state = FOCUS_WAIT;
+    }
+  }
+  if (state == FOCUS_WAIT) {
+    if (millis() - startTime > delayTime) {
+      digitalWrite(SHUTTER_PIN, HIGH);
+      delayTime = g_shutterDelay;
+      startTime = millis();
+      state = TRIGGER_WAIT;
+    }
+  }
+  if (state == TRIGGER_WAIT) {
+    if (millis() - startTime > delayTime) {
+      g_picturesCount++;
+      g_updateStatus = true;
+      printScannerStats();
+      digitalWrite(FOCUS_PIN, LOW);
+      digitalWrite(SHUTTER_PIN, LOW);
+      state = updatePosition(state,modePattern);
+    }
   }
 }
 
@@ -298,7 +327,7 @@ MENU(subMenuHardware,"Hardware",doNothing,noEvent,noStyle
 //Panobot Main Menu
 MENU(mainMenu,"Main menu",doNothing,noEvent,noStyle
   ,OP("Scan",runScanCallback,enterEvent)
-  ,OP("Take Picture",triggerPicture,enterEvent)
+  ,OP("Take Picture",doNothing,enterEvent)
   ,SUBMENU(subMenuSetup)
   ,SUBMENU(subMenuHardware)
 );
@@ -372,7 +401,7 @@ void loop() {
     drawStatus();
     u8g2.sendBuffer();
   }
-  runScanService();
+  stateMachine();
   panStepper.run();
   tiltStepper.run();
 }
