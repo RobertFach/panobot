@@ -140,14 +140,6 @@ void updateMaxTiltDownPosition(eventMask e) {
   updateScanner();
 }
 
-void runScanCallback()
-{
-  g_runScan = true;
-  g_scanPositionHorizontal = 0;
-  g_scanPositionVertical = 0;
-  g_updateStatus = true;
-}
-
 void printScannerStats() {
   Serial.print("H[");
   Serial.print(g_scanPositionHorizontal+1, DEC);
@@ -171,11 +163,13 @@ typedef enum {
   POSITIONING,
   STABILIZE_WAIT,
   FOCUS_WAIT,
-  TRIGGER_WAIT
+  TRIGGER_WAIT,
+  FINISH
 } eSystemState;
 
 typedef enum {
-  ZICK_ZACK_LEFT_RIGHT_DOWN_UP
+  ZICK_ZACK_LEFT_RIGHT_DOWN_UP,
+  SPHERICAL
 } eSystemModePattern;
 
 eSystemState state = IDLE;
@@ -183,12 +177,31 @@ eSystemModePattern modePattern = ZICK_ZACK_LEFT_RIGHT_DOWN_UP;
 long delayTime = 0;
 long startTime = 0;
 
+void runScanCallback()
+{
+  g_runScan = true;
+  g_scanPositionHorizontal = 0;
+  g_scanPositionVertical = 0;
+  g_updateStatus = true;
+  modePattern = ZICK_ZACK_LEFT_RIGHT_DOWN_UP;
+}
+
+void runSphereCallback()
+{
+  g_runScan = true;
+  modePattern = SPHERICAL;
+  g_picturesTotal = 0;
+}
+
 eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
    if (state == IDLE) {
       if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
         g_updateStatus = true;
         panPos = g_maxPanLeftDeg;
         tiltPos = g_maxTiltDownDeg;
+      } else if (mode == SPHERICAL) {
+        panPos = 0;
+        tiltPos = -60;
       }
    } else {
       if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
@@ -196,7 +209,11 @@ eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
         if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
           if (g_scanPositionVertical >= g_picturesVertical-1) {
             g_runScan = false;
-            return IDLE;
+            panPos = 0;
+            tiltPos = 0;
+            tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
+            panStepper.moveTo(panPos * pan_step_per_deg);
+            return FINISH;
           } else {
             tiltPos += g_tiltStepDeg;
           }
@@ -206,6 +223,29 @@ eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
         } else {
           panPos += g_panStepDeg;
           g_scanPositionHorizontal++;
+        }
+      } else if (mode == SPHERICAL) {
+
+        if (panPos > 360 || tiltPos == 90) {
+          if (tiltPos == 90) {
+            g_runScan = false;
+            panPos = 0;
+            tiltPos = 0;
+            tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
+            panStepper.moveTo(panPos * pan_step_per_deg);
+            return FINISH;
+          } else {
+            tiltPos += g_tiltStepDeg;
+            if (tiltPos > 90) {
+              tiltPos = 90;
+            }
+          }
+          panPos = 0;
+          panStepper.setCurrentPosition(0);
+        } else {
+          if (tiltPos != 90) {
+            panPos += abs(floor(g_panStepDeg * 1 / cos( radians(tiltPos))));
+          }
         }
       }
    }
@@ -249,6 +289,11 @@ void stateMachine() {
       digitalWrite(FOCUS_PIN, LOW);
       digitalWrite(SHUTTER_PIN, LOW);
       state = updatePosition(state,modePattern);
+    }
+  }
+  if (state == FINISH) {
+    if (tiltStepper.distanceToGo() == 0 && panStepper.distanceToGo() == 0) {
+      state = IDLE;
     }
   }
 }
@@ -327,6 +372,7 @@ MENU(subMenuHardware,"Hardware",doNothing,noEvent,noStyle
 //Panobot Main Menu
 MENU(mainMenu,"Main menu",doNothing,noEvent,noStyle
   ,OP("Scan",runScanCallback,enterEvent)
+  ,OP("Sphere", runSphereCallback,enterEvent)
   ,OP("Take Picture",doNothing,enterEvent)
   ,SUBMENU(subMenuSetup)
   ,SUBMENU(subMenuHardware)
