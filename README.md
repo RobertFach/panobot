@@ -4,12 +4,14 @@ Panobot is a full automatic robot, which can be used to create Panoramas and Gig
 
 Panobot has the following menu features:
  * Scan
-   * starts a Scan
+   * starts a scan
+ * Sphere
+   * starts a spherical scan (360x180)
  * Take picture
    * allows to manually take a picture, this is usefull for testing the camera trigger connection
  * Setup
    * Pan Left, Pan Right, Tilt Up, Tilt Down
-     * defines the scan area of the panorama/gigapixel, the head will move while the range is defined
+     * defines the scan area of the panorama/gigapixel, the head will move while the range is defined, this is used for a normal scan
    * Image P-Delay
      * the longer, the more time the camera has to measure and (eventually focus, if not in manual camera mode), triggers focusing of camera
    * Image Delay
@@ -34,7 +36,7 @@ Required Hardware:
    * 2 stepper motors Nema17, like 42BYGHM810
    * Arduino Mega 2560
    * Reprap Full Graphic SmartLCD with clickencoder
-   * the controller PCB (this is missing yet), which consists of two stepper drivers A4988 and two optocopplers; a PCB version will follow soon
+   * the controller PCB in version 1.1.0, which consists of two stepper drivers A4988 and two optocopplers; you can build your own pcb (see pcb folder) or get one...
 
 Required Software:
    * install atom editor

@@ -48,16 +48,17 @@ boolean g_isPanStepSetup = false;
 boolean g_isMaxTiltUpSetup = false;
 boolean g_isMaxTiltDownSetup = false;
 boolean g_isTiltStepSetup = false;
-boolean g_runScanRight = false;
-boolean g_takePicture = false;
-boolean g_runTilt = false;
 boolean g_updateStatus = true;
 
+double g_maxPanSpeed = 3000.0;
+double g_maxPanAccel = 2000.0;
+double g_maxTiltSpeed = 2000.0;
+double g_maxTiltAccel = 2000.0;
 int pan_step_per_deg = 7 * 8;
 int g_maxPanLeftDeg = -10;
 int g_maxPanRightDeg = +10;
 double g_panStepDeg = 0;
-int tilt_step_per_deg = 35;
+int tilt_step_per_deg = 50; // small gear 35;
 int g_maxTiltUpDeg = +10;
 int g_maxTiltDownDeg = -10;
 double g_tiltStepDeg = 0;
@@ -70,6 +71,8 @@ int g_picturesTotal = 0;
 int g_takePictureDelay = 250;
 int g_takePicturePreDelay = 0;
 int g_shutterDelay = 500;
+double panPos = 0;
+double tiltPos = 0;
 
 double g_crop = 1.6;
 double g_sensorFF_horizontal = 36.0;
@@ -137,19 +140,6 @@ void updateMaxTiltDownPosition(eventMask e) {
   updateScanner();
 }
 
-void runScanCallback()
-{
-  g_runScan = true;
-  g_runScanRight = true;
-  g_runTilt = false;
-  g_takePicture = true;
-  g_scanPositionHorizontal = 0;
-  g_scanPositionVertical = 0;
-  g_updateStatus = true;
-  panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
-  tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
-}
-
 void printScannerStats() {
   Serial.print("H[");
   Serial.print(g_scanPositionHorizontal+1, DEC);
@@ -168,56 +158,153 @@ void printScannerStats() {
   Serial.println("]");
 }
 
-//this code is ugly, but it works
-void triggerPicture()
+typedef enum {
+  IDLE,
+  POSITIONING,
+  STABILIZE_WAIT,
+  FOCUS_WAIT,
+  TRIGGER_WAIT,
+  FINISH
+} eSystemState;
+
+typedef enum {
+  ZICK_ZACK_LEFT_RIGHT_DOWN_UP,
+  SPHERICAL
+} eSystemModePattern;
+
+eSystemState state = IDLE;
+eSystemModePattern modePattern = ZICK_ZACK_LEFT_RIGHT_DOWN_UP;
+long delayTime = 0;
+long startTime = 0;
+
+void runScanCallback()
 {
-  digitalWrite(FOCUS_PIN, HIGH);
-  delay(g_takePicturePreDelay);
-  digitalWrite(SHUTTER_PIN, HIGH);
-  delay(g_shutterDelay);
-  digitalWrite(FOCUS_PIN, LOW);
-  digitalWrite(SHUTTER_PIN, LOW);
-  delay(g_takePictureDelay);
-  g_takePicture = false;
+  g_runScan = true;
+  g_scanPositionHorizontal = 0;
+  g_scanPositionVertical = 0;
+  g_updateStatus = true;
+  modePattern = ZICK_ZACK_LEFT_RIGHT_DOWN_UP;
 }
 
-//this is also ugly, but also works :)
-void runScanService() {
-  if (g_runScan) {
-    if (tiltStepper.distanceToGo() == 0)
-      if (panStepper.distanceToGo() == 0)
-      {
-        printScannerStats();
-        if (g_takePicture) {
-          triggerPicture();
-          g_picturesCount++;
-          g_updateStatus = true;
+void runSphereCallback()
+{
+  g_runScan = true;
+  modePattern = SPHERICAL;
+  g_picturesTotal = 0;
+}
+
+eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
+   if (state == IDLE) {
+      if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
+        g_updateStatus = true;
+        panPos = g_maxPanLeftDeg;
+        tiltPos = g_maxTiltDownDeg;
+      } else if (mode == SPHERICAL) {
+        panPos = 0;
+        tiltPos = -60;
+      }
+   } else {
+      if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
+        g_updateStatus = true;
+        if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
+          if (g_scanPositionVertical >= g_picturesVertical-1) {
+            g_runScan = false;
+            panPos = 0;
+            tiltPos = 0;
+            tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
+            panStepper.moveTo(panPos * pan_step_per_deg);
+            return FINISH;
+          } else {
+            tiltPos += g_tiltStepDeg;
+          }
+          panPos = g_maxPanLeftDeg;
+          g_scanPositionHorizontal = 0;
+          g_scanPositionVertical++;
         } else {
-          g_takePicture = true;
-          if (g_runTilt) {
-              g_scanPositionVertical++;
-              g_updateStatus = true;
-              if (g_scanPositionVertical > g_picturesVertical-1) {
-                g_runScan = false;
-              } else {
-                tiltStepper.move(g_tiltStepDeg * tilt_step_per_deg);
-		            panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
-                g_runScanRight = true;
-                g_runTilt = false;
-              }
-          } else if (g_runScanRight) {
-            g_scanPositionHorizontal++;
-            g_updateStatus = true;
-            if (g_scanPositionHorizontal >= g_picturesHorizontal-1) {
-              g_runScanRight = false;
-	            g_scanPositionHorizontal = 0;
-              g_runTilt = true;
+          panPos += g_panStepDeg;
+          g_scanPositionHorizontal++;
+        }
+      } else if (mode == SPHERICAL) {
+
+        if (panPos > 360 || tiltPos == 90) {
+          if (tiltPos == 90) {
+            g_runScan = false;
+            panPos = 0;
+            tiltPos = 0;
+            tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
+            panStepper.moveTo(panPos * pan_step_per_deg);
+            return FINISH;
+          } else {
+            tiltPos += g_tiltStepDeg;
+            if (tiltPos > 90) {
+              tiltPos = 90;
             }
-            panStepper.move(g_panStepDeg * pan_step_per_deg);
+          }
+          panPos = 0;
+          panStepper.setCurrentPosition(0);
+        } else {
+          if (tiltPos != 90) {
+            panPos += abs(floor(g_panStepDeg * 1 / cos( radians(tiltPos))));
           }
         }
       }
+   }
+   tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
+   panStepper.moveTo(panPos * pan_step_per_deg);
+   return POSITIONING;
+}
+
+void stateMachine() {
+  if (state == IDLE && g_runScan) {
+    state = updatePosition(state, modePattern);
   }
+  if (state == POSITIONING) {
+    if (tiltStepper.distanceToGo() == 0 && panStepper.distanceToGo() == 0) {
+      delayTime = g_takePictureDelay;
+      startTime = millis();
+      state = STABILIZE_WAIT;
+    }
+  }
+  if (state == STABILIZE_WAIT) {
+    if (millis() - startTime > delayTime) {
+      digitalWrite(FOCUS_PIN, HIGH);
+      delayTime = g_takePicturePreDelay;
+      startTime = millis();
+      state = FOCUS_WAIT;
+    }
+  }
+  if (state == FOCUS_WAIT) {
+    if (millis() - startTime > delayTime) {
+      digitalWrite(SHUTTER_PIN, HIGH);
+      delayTime = g_shutterDelay;
+      startTime = millis();
+      state = TRIGGER_WAIT;
+    }
+  }
+  if (state == TRIGGER_WAIT) {
+    if (millis() - startTime > delayTime) {
+      g_picturesCount++;
+      g_updateStatus = true;
+      printScannerStats();
+      digitalWrite(FOCUS_PIN, LOW);
+      digitalWrite(SHUTTER_PIN, LOW);
+      state = updatePosition(state,modePattern);
+    }
+  }
+  if (state == FINISH) {
+    if (tiltStepper.distanceToGo() == 0 && panStepper.distanceToGo() == 0) {
+      state = IDLE;
+    }
+  }
+}
+
+void initializeSteppers() {
+  panStepper.setMaxSpeed(g_maxPanSpeed);
+  panStepper.setAcceleration(g_maxPanAccel);
+  panStepper.setPinsInverted(true,false,false);
+  tiltStepper.setMaxSpeed(g_maxTiltSpeed);
+  tiltStepper.setAcceleration(g_maxTiltAccel);
+  tiltStepper.setPinsInverted(false,false,false);
 }
 
 //initializes everything which is bot related
@@ -226,12 +313,7 @@ void setupPanoBot() {
   pinMode(SHUTTER_PIN, OUTPUT);
   digitalWrite(FOCUS_PIN, LOW);
   digitalWrite(SHUTTER_PIN, LOW);
-  panStepper.setMaxSpeed(400.0);
-  panStepper.setAcceleration(300.0);
-  panStepper.setPinsInverted(true,false,false);
-  tiltStepper.setMaxSpeed(400.0);
-  tiltStepper.setAcceleration(300.0);
-  tiltStepper.setPinsInverted(false,false,false);
+  initializeSteppers();
   updateScanner();
   g_updateStatus = true;
 }
@@ -277,11 +359,23 @@ MENU(subMenuSetup,"Setup",doNothing,noEvent,noStyle
   ,EXIT("<Back")
 );
 
+MENU(subMenuHardware,"Hardware",doNothing,noEvent,noStyle
+  ,FIELD(pan_step_per_deg,  "PAN  ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
+  ,FIELD(tilt_step_per_deg, "TILT ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
+  ,FIELD(g_maxPanSpeed,     "Pan  Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(g_maxPanAccel,     "Pan  Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(g_maxTiltSpeed,    "Tilt Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(g_maxTiltAccel,    "Tilt Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,EXIT("<Back")
+)
+
 //Panobot Main Menu
 MENU(mainMenu,"Main menu",doNothing,noEvent,noStyle
   ,OP("Scan",runScanCallback,enterEvent)
-  ,OP("Take Picture",triggerPicture,enterEvent)
+  ,OP("Sphere", runSphereCallback,enterEvent)
+  ,OP("Take Picture",doNothing,enterEvent)
   ,SUBMENU(subMenuSetup)
+  ,SUBMENU(subMenuHardware)
 );
 
 //SmartLCD encoder driver
@@ -353,7 +447,7 @@ void loop() {
     drawStatus();
     u8g2.sendBuffer();
   }
-  runScanService();
+  stateMachine();
   panStepper.run();
   tiltStepper.run();
 }
