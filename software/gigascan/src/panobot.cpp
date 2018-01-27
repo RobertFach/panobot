@@ -417,6 +417,20 @@ void drawStatus() {
   g_updateStatus = false;
 }
 
+void splashscreen() {
+  u8g2.clearBuffer();
+  int x;
+  int y;
+  for (x=0;x<128;x++) {
+    for (y=0;y<64;y++) {
+      if (pgm_read_byte_near(SPLASHSCREEN + x*64+y) =='1')
+        u8g2.drawPixel(x, y);
+    }
+  }
+  u8g2.sendBuffer();
+  delay(5000);
+}
+
 void setup() {
   options = &myOptions;
   //initialize Serial interface
@@ -430,6 +444,7 @@ void setup() {
   encoder.begin();
   //initialize bot
   setupPanoBot();
+  splashscreen();
 }
 
 void loop() {
