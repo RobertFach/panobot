@@ -81,8 +81,8 @@ void updateScanner() {
   Serial.print("VSCAN: "); Serial.println(abs(user_config.scan_max_tilt_up) + abs(user_config.scan_max_tilt_down), DEC);
   Serial.print("g_hfov: "); Serial.println(g_hfov,DEC);
   Serial.print("g_vfov: "); Serial.println(g_vfov,DEC);
-  Serial.print("g_panStepDeg: "); Serial.println(user_config.pan_steps_per_degree,DEC);
-  Serial.print("g_tiltStepDeg: "); Serial.println(user_config.tilt_steps_per_degree,DEC);
+  Serial.print("g_panStepDeg: "); Serial.println(g_panStepDeg,DEC);
+  Serial.print("g_tiltStepDeg: "); Serial.println(g_tiltStepDeg,DEC);
   Serial.print("g_picturesHorizontal: "); Serial.println(g_picturesHorizontal, DEC);
   Serial.print("g_picturesVertical: "); Serial.println(g_picturesVertical, DEC);
   Serial.print("g_picturesTotal: "); Serial.println(g_picturesTotal, DEC);
