@@ -24,6 +24,7 @@ e-mail   :  robert.fach@gmx.net
 #endif
 
 #include <config.h>
+#include <eeprom-config.h>
 
 #include <AccelStepper.h>
 #include <math.h>
@@ -50,17 +51,7 @@ boolean g_isMaxTiltDownSetup = false;
 boolean g_isTiltStepSetup = false;
 boolean g_updateStatus = true;
 
-double g_maxPanSpeed = 3000.0;
-double g_maxPanAccel = 2000.0;
-double g_maxTiltSpeed = 2000.0;
-double g_maxTiltAccel = 2000.0;
-int pan_step_per_deg = 7 * 8;
-int g_maxPanLeftDeg = -10;
-int g_maxPanRightDeg = +10;
 double g_panStepDeg = 0;
-int tilt_step_per_deg = 50; // small gear 35;
-int g_maxTiltUpDeg = +10;
-int g_maxTiltDownDeg = -10;
 double g_tiltStepDeg = 0;
 int g_scanPositionHorizontal = 0;
 int g_scanPositionVertical = 0;
@@ -68,37 +59,30 @@ int g_picturesHorizontal = 0;
 int g_picturesVertical = 0;
 int g_picturesCount = 0;
 int g_picturesTotal = 0;
-int g_takePictureDelay = 250;
-int g_takePicturePreDelay = 0;
-int g_shutterDelay = 500;
 double panPos = 0;
 double tiltPos = 0;
 
-double g_crop = 1.6;
 double g_sensorFF_horizontal = 36.0;
 double g_sensorFF_vertical = 24.0;
-int g_focalLength = 300;
-int g_hol = 30;
-int g_vol = 30;
 double g_hfov = 0;
 double g_vfov = 0;
 
 
 //callback function used by the menu to do the math when updating some values
 void updateScanner() {
-  g_hfov = degrees( 2 * atan2(g_sensorFF_horizontal, g_crop * 2 * g_focalLength));
-  g_vfov = degrees( 2 * atan2(g_sensorFF_vertical, g_crop * 2 * g_focalLength));
-  g_panStepDeg = g_hfov * (100 - g_hol) / 100;
-  g_tiltStepDeg = g_vfov * (100 - g_vol) / 100;
-  g_picturesHorizontal = ceil((abs(g_maxPanLeftDeg) + abs(g_maxPanRightDeg)) / g_panStepDeg);
-  g_picturesVertical = ceil((abs(g_maxTiltUpDeg) + abs(g_maxTiltDownDeg)) / g_tiltStepDeg);
+  g_hfov = degrees( 2 * atan2(g_sensorFF_horizontal, user_config.crop_factor * 2 * user_config.focal_length));
+  g_vfov = degrees( 2 * atan2(g_sensorFF_vertical, user_config.crop_factor * 2 * user_config.focal_length));
+  g_panStepDeg = g_hfov * (100 - user_config.horizontal_overlap) / 100;
+  g_tiltStepDeg = g_vfov * (100 - user_config.vertical_overlap) / 100;
+  g_picturesHorizontal = ceil((abs(user_config.scan_max_pan_left) + abs(user_config.scan_max_pan_right)) / g_panStepDeg);
+  g_picturesVertical = ceil((abs(user_config.scan_max_tilt_up) + abs(user_config.scan_max_tilt_down)) / g_tiltStepDeg);
   g_picturesTotal = g_picturesHorizontal * g_picturesVertical;
-  Serial.print("HSCAN: "); Serial.println(abs(g_maxPanLeftDeg) + abs(g_maxPanRightDeg), DEC);
-  Serial.print("VSCAN: "); Serial.println(abs(g_maxTiltUpDeg) + abs(g_maxTiltDownDeg), DEC);
+  Serial.print("HSCAN: "); Serial.println(abs(user_config.scan_max_pan_left) + abs(user_config.scan_max_pan_right), DEC);
+  Serial.print("VSCAN: "); Serial.println(abs(user_config.scan_max_tilt_up) + abs(user_config.scan_max_tilt_down), DEC);
   Serial.print("g_hfov: "); Serial.println(g_hfov,DEC);
   Serial.print("g_vfov: "); Serial.println(g_vfov,DEC);
-  Serial.print("g_panStepDeg: "); Serial.println(g_panStepDeg,DEC);
-  Serial.print("g_tiltStepDeg: "); Serial.println(g_tiltStepDeg,DEC);
+  Serial.print("g_panStepDeg: "); Serial.println(user_config.pan_steps_per_degree,DEC);
+  Serial.print("g_tiltStepDeg: "); Serial.println(user_config.tilt_steps_per_degree,DEC);
   Serial.print("g_picturesHorizontal: "); Serial.println(g_picturesHorizontal, DEC);
   Serial.print("g_picturesVertical: "); Serial.println(g_picturesVertical, DEC);
   Serial.print("g_picturesTotal: "); Serial.println(g_picturesTotal, DEC);
@@ -109,7 +93,7 @@ void updateMaxPanLeftPosition(eventMask e) {
   if (e & exitEvent) {
     panStepper.moveTo(0);
   } else {
-    panStepper.moveTo(g_maxPanLeftDeg * pan_step_per_deg);
+    panStepper.moveTo(user_config.scan_max_pan_left * user_config.pan_steps_per_degree);
   }
   updateScanner();
 }
@@ -117,7 +101,7 @@ void updateMaxPanRightPosition(eventMask e) {
   if (e & exitEvent) {
     panStepper.moveTo(0);
   } else {
-    panStepper.moveTo(g_maxPanRightDeg * pan_step_per_deg);
+    panStepper.moveTo(user_config.scan_max_pan_right * user_config.pan_steps_per_degree);
   }
   updateScanner();
 }
@@ -126,7 +110,7 @@ void updateMaxTiltUpPosition(eventMask e) {
   if (e & exitEvent) {
     tiltStepper.moveTo(0);
   } else {
-    tiltStepper.moveTo(g_maxTiltUpDeg * tilt_step_per_deg);
+    tiltStepper.moveTo(user_config.scan_max_tilt_up * user_config.tilt_steps_per_degree);
   }
   updateScanner();
 }
@@ -135,7 +119,7 @@ void updateMaxTiltDownPosition(eventMask e) {
   if (e & exitEvent) {
     tiltStepper.moveTo(0);
   } else {
-    tiltStepper.moveTo(g_maxTiltDownDeg * tilt_step_per_deg);
+    tiltStepper.moveTo(user_config.scan_max_tilt_down * user_config.tilt_steps_per_degree);
   }
   updateScanner();
 }
@@ -197,8 +181,8 @@ eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
    if (state == IDLE) {
       if (mode == ZICK_ZACK_LEFT_RIGHT_DOWN_UP) {
         g_updateStatus = true;
-        panPos = g_maxPanLeftDeg;
-        tiltPos = g_maxTiltDownDeg;
+        panPos = user_config.scan_max_pan_left;
+        tiltPos = user_config.scan_max_tilt_down;
       } else if (mode == SPHERICAL) {
         panPos = 0;
         tiltPos = -60;
@@ -211,13 +195,13 @@ eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
             g_runScan = false;
             panPos = 0;
             tiltPos = 0;
-            tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
-            panStepper.moveTo(panPos * pan_step_per_deg);
+            tiltStepper.moveTo(tiltPos * user_config.tilt_steps_per_degree);
+            panStepper.moveTo(panPos * user_config.pan_steps_per_degree);
             return FINISH;
           } else {
             tiltPos += g_tiltStepDeg;
           }
-          panPos = g_maxPanLeftDeg;
+          panPos = user_config.scan_max_pan_left;
           g_scanPositionHorizontal = 0;
           g_scanPositionVertical++;
         } else {
@@ -231,8 +215,8 @@ eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
             g_runScan = false;
             panPos = 0;
             tiltPos = 0;
-            tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
-            panStepper.moveTo(panPos * pan_step_per_deg);
+            tiltStepper.moveTo(tiltPos * user_config.tilt_steps_per_degree);
+            panStepper.moveTo(panPos * user_config.pan_steps_per_degree);
             return FINISH;
           } else {
             tiltPos += g_tiltStepDeg;
@@ -249,8 +233,8 @@ eSystemState updatePosition(eSystemState state, eSystemModePattern mode) {
         }
       }
    }
-   tiltStepper.moveTo(tiltPos * tilt_step_per_deg);
-   panStepper.moveTo(panPos * pan_step_per_deg);
+   tiltStepper.moveTo(tiltPos * user_config.tilt_steps_per_degree);
+   panStepper.moveTo(panPos * user_config.pan_steps_per_degree);
    return POSITIONING;
 }
 
@@ -260,7 +244,7 @@ void stateMachine() {
   }
   if (state == POSITIONING) {
     if (tiltStepper.distanceToGo() == 0 && panStepper.distanceToGo() == 0) {
-      delayTime = g_takePictureDelay;
+      delayTime = user_config.stabilize_and_write_delay;
       startTime = millis();
       state = STABILIZE_WAIT;
     }
@@ -268,7 +252,7 @@ void stateMachine() {
   if (state == STABILIZE_WAIT) {
     if (millis() - startTime > delayTime) {
       digitalWrite(FOCUS_PIN, HIGH);
-      delayTime = g_takePicturePreDelay;
+      delayTime = user_config.focus_delay;
       startTime = millis();
       state = FOCUS_WAIT;
     }
@@ -276,7 +260,7 @@ void stateMachine() {
   if (state == FOCUS_WAIT) {
     if (millis() - startTime > delayTime) {
       digitalWrite(SHUTTER_PIN, HIGH);
-      delayTime = g_shutterDelay;
+      delayTime = user_config.trigger_delay;
       startTime = millis();
       state = TRIGGER_WAIT;
     }
@@ -299,11 +283,11 @@ void stateMachine() {
 }
 
 void initializeSteppers() {
-  panStepper.setMaxSpeed(g_maxPanSpeed);
-  panStepper.setAcceleration(g_maxPanAccel);
+  panStepper.setMaxSpeed(user_config.maximum_pan_speed);
+  panStepper.setAcceleration(user_config.pan_acceleration);
   panStepper.setPinsInverted(true,false,false);
-  tiltStepper.setMaxSpeed(g_maxTiltSpeed);
-  tiltStepper.setAcceleration(g_maxTiltAccel);
+  tiltStepper.setMaxSpeed(user_config.maximum_tilt_speed);
+  tiltStepper.setAcceleration(user_config.tilt_acceleration);
   tiltStepper.setPinsInverted(false,false,false);
 }
 
@@ -316,6 +300,11 @@ void setupPanoBot() {
   initializeSteppers();
   updateScanner();
   g_updateStatus = true;
+}
+
+void resetConfiguration() {
+  resetToDefaultConfig();
+  updateScanner();
 }
 
 //Panobot MENU system, it uses ArduinoMenu library in combination with U8g2
@@ -345,27 +334,31 @@ U8G2_ST7920_128X64_F_HW_SPI u8g2(U8G2_R0, DISPLAY_CS_PIN, U8X8_PIN_NONE);
 
 // Panobot Setup Menu
 MENU(subMenuSetup,"Setup",doNothing,noEvent,noStyle
-  ,FIELD(g_maxPanLeftDeg,      "Pan Left     ","DEG",-200,0,10,1,updateMaxPanLeftPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_maxPanRightDeg,     "Pan Right    ","DEG",0,200,10,1,updateMaxPanRightPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_maxTiltUpDeg,       "Tilt UP      ","DEG",0,100,10,1,updateMaxTiltUpPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_maxTiltDownDeg,     "Tilt Down    ","DEG",-90,0,10,1,updateMaxTiltDownPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_takePicturePreDelay,"Image P-Delay","ms",0,5000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_takePictureDelay,   "Image Delay  ","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_shutterDelay,       "Shutter Delay","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
-  ,FIELD(g_focalLength,        "Focal Length ","mm",1,1000,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_hol,                "Hor. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
-  ,FIELD(g_vol,                "Ver. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
-  ,FIELD(g_crop,               "Crop Factor  ","",0,10,0.1,0.01,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
+  ,FIELD(user_config.scan_max_pan_left,      "Pan Left     ","DEG",-200,0,10,1,updateMaxPanLeftPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(user_config.scan_max_pan_right,     "Pan Right    ","DEG",0,200,10,1,updateMaxPanRightPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(user_config.scan_max_tilt_up,       "Tilt UP      ","DEG",0,100,10,1,updateMaxTiltUpPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(user_config.scan_max_tilt_down,     "Tilt Down    ","DEG",-90,0,10,1,updateMaxTiltDownPosition,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(user_config.stabilize_and_write_delay,"StWr Delay","ms",0,5000,1000,100,doNothing,noEvent,wrapStyle)
+  ,FIELD(user_config.focus_delay,   "Focus Delay  ","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
+  ,FIELD(user_config.trigger_delay,       "Trigger Delay","ms",0,15000,1000,100,doNothing,noEvent,wrapStyle)
+  ,FIELD(user_config.focal_length, "Focal Length ","mm",1,1000,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(user_config.horizontal_overlap, "Hor. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent | updateEvent,wrapStyle)
+  ,FIELD(user_config.vertical_overlap, "Ver. Overlap ","%",0,100,10,1,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
+  ,FIELD(user_config.crop_factor, "Crop Factor  ","",0,10,0.1,0.01,updateScanner,enterEvent | exitEvent| updateEvent,wrapStyle)
+  ,OP("Save", saveConfig, enterEvent)
+  ,OP("Reset", resetConfiguration, enterEvent)
   ,EXIT("<Back")
 );
 
 MENU(subMenuHardware,"Hardware",doNothing,noEvent,noStyle
-  ,FIELD(pan_step_per_deg,  "PAN  ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
-  ,FIELD(tilt_step_per_deg, "TILT ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
-  ,FIELD(g_maxPanSpeed,     "Pan  Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
-  ,FIELD(g_maxPanAccel,     "Pan  Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
-  ,FIELD(g_maxTiltSpeed,    "Tilt Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
-  ,FIELD(g_maxTiltAccel,    "Tilt Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(user_config.pan_steps_per_degree,  "PAN  ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
+  ,FIELD(user_config.tilt_steps_per_degree, "TILT ", "#/deg",0,1000,10,1, doNothing, noEvent, wrapStyle)
+  ,FIELD(user_config.maximum_pan_speed,     "Pan  Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(user_config.pan_acceleration,     "Pan  Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(user_config.maximum_tilt_speed,    "Tilt Speed", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,FIELD(user_config.tilt_acceleration,    "Tilt Accel", "", 0, 5000, 100, 10, initializeSteppers, enterEvent | exitEvent| updateEvent, wrapStyle)
+  ,OP("Save", saveConfig, enterEvent)
+  ,OP("Reset", resetConfiguration, enterEvent)
   ,EXIT("<Back")
 )
 
@@ -432,6 +425,7 @@ void splashscreen() {
 }
 
 void setup() {
+  loadConfig();
   options = &myOptions;
   //initialize Serial interface
   Serial.begin(115200);
