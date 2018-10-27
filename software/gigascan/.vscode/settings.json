@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/marco/.platformio/penv/bin:/Users/marco/.platformio/penv:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/usr/local/CrossPack-AVR/bin",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}

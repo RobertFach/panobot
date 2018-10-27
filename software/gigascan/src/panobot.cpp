@@ -36,6 +36,21 @@ e-mail   :  robert.fach@gmx.net
 #include <menuIO/encoderIn.h>
 #include <menuIO/keyIn.h>
 
+// SDCard
+// --------------------------
+// on the Rev 1.1.0 Board you have connect the following Pins from J4
+//  J4 Pin 1 -> D50 (AT-Mega)
+//  J4 Pin 2 -> J3 Pin 5
+//  J4 Pin 4 -> D41 (AT-Mega)
+//  J4 Pin 6 -> J3 Pin 3
+#include <SD.h>
+const uint8_t BASE_NAME_SIZE = sizeof(FILE_BASE_NAME) - 1;
+char fileName[] = FILE_BASE_NAME "00.xml";
+bool useSDCard = false;
+double rollPos = 0;
+File sdFile;
+
+
 using namespace Menu;
 
 //panobot logic & motor control
@@ -66,6 +81,93 @@ double g_sensorFF_horizontal = 36.0;
 double g_sensorFF_vertical = 24.0;
 double g_hfov = 0;
 double g_vfov = 0;
+
+
+
+void xmlWriteHeader() {
+  if (useSDCard) {
+    sdFile = SD.open(fileName, FILE_WRITE);
+    if (sdFile) {
+      sdFile.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+      sdFile.println("<papywizard version=\"c\">");
+      sdFile.println("  <header>");
+      sdFile.println("    <general>");
+      sdFile.println("      <title>");
+      sdFile.println("        Papywizard-Format XML File");
+      sdFile.println("      </title>");
+      sdFile.println("      <comment>");
+      sdFile.println("        Panobot generated file.");
+      sdFile.println("      </comment>");
+      sdFile.println("    </general>");
+      sdFile.println("    <shooting mode=\"preset\">");
+      sdFile.println("      <headOrientation>");
+      sdFile.println("        up");
+      sdFile.println("      </headOrientation>");
+      sdFile.println("      <cameraOrientation>");
+      sdFile.println("        landscape");
+      sdFile.println("      </cameraOrientation>");
+      sdFile.println("    </shooting>");
+      sdFile.println("    <camera>");
+      //sdFile.println("      <sensor coef=\"5.02\" ratio=\"3:2\"/>");
+      sdFile.println("    </camera>");
+      sdFile.println("    <lens type=\"rectilinear\">");
+      sdFile.println("      <focal>");
+      sdFile.print("        ");
+      sdFile.println((user_config.focal_length*user_config.crop_factor), DEC);
+      sdFile.println("      </focal>");
+      sdFile.println("    </lens>");
+      sdFile.println("  </header>");
+      sdFile.println("  <shoot>");
+      sdFile.close();
+    }
+  }
+}
+
+
+void xmlWritePicture() {
+  if (useSDCard) {
+    sdFile = SD.open(fileName, FILE_WRITE);
+    if (sdFile) {
+      sdFile.print("    <pict bracket=\"1\" id=\""); sdFile.print(g_picturesCount,DEC); sdFile.println("\">");
+      sdFile.print("      <position pitch=\""); sdFile.print(tiltPos,DEC); sdFile.print("\" roll=\""); sdFile.print(rollPos,DEC); sdFile.print("\" yaw=\""); sdFile.print(panPos,DEC); sdFile.println("\"/>");
+      sdFile.println("    </pict>");
+      sdFile.close();
+    }
+  }
+}
+
+void xmlWriteFooter() {
+  if (useSDCard) {
+    sdFile = SD.open(fileName, FILE_WRITE);
+    if (sdFile) {
+      sdFile.println("  </shoot>");
+      sdFile.println("</papywizard>");
+      sdFile.close();
+    }
+  }
+}
+
+
+void sdGetNextFilename() {
+  if(useSDCard) {
+    while (SD.exists(fileName)) {
+      if (fileName[BASE_NAME_SIZE + 1] != '9') {
+        fileName[BASE_NAME_SIZE + 1]++;
+      } else if (fileName[BASE_NAME_SIZE] != '9') {
+        fileName[BASE_NAME_SIZE + 1] = '0';
+        fileName[BASE_NAME_SIZE]++;
+      } else {
+        Serial.println(F("Can't create file name"));
+        return;
+      }
+    }
+    sdFile = SD.open(fileName, FILE_WRITE);
+    if (sdFile) {
+      sdFile.close();
+    }
+  }
+}
+
 
 
 //callback function used by the menu to do the math when updating some values
@@ -163,6 +265,8 @@ long startTime = 0;
 
 void runScanCallback()
 {
+  //sdGetNextFilename();
+  xmlWriteHeader();
   g_runScan = true;
   g_scanPositionHorizontal = 0;
   g_scanPositionVertical = 0;
@@ -172,6 +276,8 @@ void runScanCallback()
 
 void runSphereCallback()
 {
+  //sdGetNextFilename();
+  xmlWriteHeader();
   g_runScan = true;
   modePattern = SPHERICAL;
   g_picturesTotal = 0;
@@ -272,12 +378,17 @@ void stateMachine() {
       printScannerStats();
       digitalWrite(FOCUS_PIN, LOW);
       digitalWrite(SHUTTER_PIN, LOW);
+      
+      // log Picture to SD Card
+      xmlWritePicture();
+      
       state = updatePosition(state,modePattern);
     }
   }
   if (state == FINISH) {
     if (tiltStepper.distanceToGo() == 0 && panStepper.distanceToGo() == 0) {
       state = IDLE;
+      xmlWriteFooter();
     }
   }
 }
@@ -424,6 +535,8 @@ void splashscreen() {
   delay(5000);
 }
 
+
+
 void setup() {
   loadConfig();
   options = &myOptions;
@@ -431,6 +544,19 @@ void setup() {
   Serial.begin(115200);
   while(!Serial);
   Serial.println("Panobot");Serial.flush();
+  
+  // SDCard
+  delay(200);
+  Serial.print("Initializing SD card...");
+  if (!SD.begin(SDCARDCHIP_SELECT_PIN)) {
+    useSDCard = false;
+  } else {
+    useSDCard = true;
+    sdGetNextFilename();
+    Serial.println("SDCard found...");
+  }
+  delay(500);
+  
   //initialize menu
   u8g2.begin();
   u8g2.setFont(fontName);
@@ -438,6 +564,7 @@ void setup() {
   encoder.begin();
   //initialize bot
   setupPanoBot();
+  Serial.println("initialization done.");
   splashscreen();
 }
 
@@ -451,7 +578,11 @@ void loop() {
     u8g2.setFontMode(1);
     u8g2.setDrawColor(1);
     u8g2.setFont(u8g2_font_ncenB12_tr);
-    u8g2.drawStr(0, 32, "PANOBOT");
+    if (useSDCard) {
+      u8g2.drawStr(0, 32, fileName);
+    } else {
+      u8g2.drawStr(0, 32, "PANOBOT");
+    }
     u8g2.setFont(fontName);
     drawStatus();
     u8g2.sendBuffer();
